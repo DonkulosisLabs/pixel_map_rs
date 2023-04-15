@@ -1,4 +1,4 @@
-use super::{Direction, IRect, Line, Point};
+use super::{Direction, IRect, IVec2, Line};
 
 pub(super) fn plot_line<F>(x0: i32, y0: i32, x1: i32, y1: i32, mut plot: F)
 where
@@ -54,7 +54,7 @@ impl LineIterator {
     }
 
     #[inline]
-    pub fn peek(&self) -> Option<Point> {
+    pub fn peek(&self) -> Option<IVec2> {
         match self {
             LineIterator::Axis(iter) => iter.peek(),
             LineIterator::Angle(iter) => iter.peek(),
@@ -66,7 +66,7 @@ impl LineIterator {
     /// for the line segment.
     /// Returns None if the end of the iterator is reached without touching the bounds.
     #[inline]
-    pub fn seek_bounds(&mut self, bounds: &IRect) -> Option<Point> {
+    pub fn seek_bounds(&mut self, bounds: &IRect) -> Option<IVec2> {
         match self {
             LineIterator::Axis(iter) => iter.seek_bounds(bounds),
             LineIterator::Angle(iter) => iter.seek_bounds(bounds),
@@ -75,7 +75,7 @@ impl LineIterator {
 }
 
 impl Iterator for LineIterator {
-    type Item = Point;
+    type Item = IVec2;
 
     fn next(&mut self) -> Option<Self::Item> {
         match self {
@@ -87,9 +87,9 @@ impl Iterator for LineIterator {
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct AxisLineIterator {
-    point: Point,
+    point: IVec2,
     direction: Direction,
-    end: Point,
+    end: IVec2,
     finished: bool,
 }
 
@@ -104,14 +104,14 @@ impl AxisLineIterator {
         })
     }
 
-    pub fn peek(&self) -> Option<Point> {
+    pub fn peek(&self) -> Option<IVec2> {
         if self.finished {
             return None;
         }
         Some(self.point)
     }
 
-    pub fn seek_bounds(&mut self, bounds: &IRect) -> Option<Point> {
+    pub fn seek_bounds(&mut self, bounds: &IRect) -> Option<IVec2> {
         let point = self.next()?;
 
         let top = bounds.top_bounds();
@@ -120,7 +120,7 @@ impl AxisLineIterator {
         let bottom = bounds.bottom_bounds();
 
         let result = match self.direction {
-            Direction::North => Some(Point::new(point.x, self.end.y.min(top))),
+            Direction::North => Some(IVec2::new(point.x, self.end.y.min(top))),
             Direction::NorthEast => {
                 let x_distance = right - self.end.x;
                 let y_distance = top - self.end.y;
@@ -130,7 +130,7 @@ impl AxisLineIterator {
                     (self.end.x + y_distance, top)
                 };
                 if y > point.y {
-                    Some(Point::new(x, y))
+                    Some(IVec2::new(x, y))
                 } else {
                     Some(point)
                 }
@@ -144,13 +144,13 @@ impl AxisLineIterator {
                     (self.end.x - y_distance, top)
                 };
                 if y > point.y {
-                    Some(Point::new(x, y))
+                    Some(IVec2::new(x, y))
                 } else {
                     Some(point)
                 }
             }
-            Direction::East => Some(Point::new(self.end.x.min(right), point.y)),
-            Direction::South => Some(Point::new(point.x, self.end.y.max(bottom))),
+            Direction::East => Some(IVec2::new(self.end.x.min(right), point.y)),
+            Direction::South => Some(IVec2::new(point.x, self.end.y.max(bottom))),
             Direction::SouthEast => {
                 let x_distance = right - self.end.x;
                 let y_distance = self.end.y - bottom;
@@ -160,7 +160,7 @@ impl AxisLineIterator {
                     (self.end.x + y_distance, bottom)
                 };
                 if y < point.y {
-                    Some(Point::new(x, y))
+                    Some(IVec2::new(x, y))
                 } else {
                     Some(point)
                 }
@@ -174,12 +174,12 @@ impl AxisLineIterator {
                     (self.end.x - y_distance, bottom)
                 };
                 if y < point.y {
-                    Some(Point::new(x, y))
+                    Some(IVec2::new(x, y))
                 } else {
                     Some(point)
                 }
             }
-            Direction::West => Some(Point::new(self.end.x.max(left), point.y)),
+            Direction::West => Some(IVec2::new(self.end.x.max(left), point.y)),
         };
 
         match result {
@@ -196,7 +196,7 @@ impl AxisLineIterator {
 }
 
 impl Iterator for AxisLineIterator {
-    type Item = Point;
+    type Item = IVec2;
 
     fn next(&mut self) -> Option<Self::Item> {
         if self.finished {
@@ -215,9 +215,9 @@ impl Iterator for AxisLineIterator {
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct AngleLineIterator {
-    end: Point,
-    dist: Point,
-    point: Point,
+    end: IVec2,
+    dist: IVec2,
+    point: IVec2,
     xi: i32,
     yi: i32,
     err: i32,
@@ -232,7 +232,7 @@ impl AngleLineIterator {
         let y0 = line.start().y();
         let x1 = line.end().x();
         let y1 = line.end().y();
-        let dist = Point::new(i32::abs(x1 - x0), i32::abs(y1 - y0));
+        let dist = IVec2::new(i32::abs(x1 - x0), i32::abs(y1 - y0));
         let xi = if x1 < x0 { -1 } else { 1 };
         let yi = if y1 < y0 { -1 } else { 1 };
         AngleLineIterator {
@@ -247,14 +247,14 @@ impl AngleLineIterator {
         }
     }
 
-    pub fn peek(&self) -> Option<Point> {
+    pub fn peek(&self) -> Option<IVec2> {
         if self.finished {
             return None;
         }
         Some(self.point)
     }
 
-    pub fn seek_bounds(&mut self, bounds: &IRect) -> Option<Point> {
+    pub fn seek_bounds(&mut self, bounds: &IRect) -> Option<IVec2> {
         while let Some(point) = self.next() {
             if let Some(next) = self.peek() {
                 if !bounds.contains(next) {
@@ -269,7 +269,7 @@ impl AngleLineIterator {
 }
 
 impl Iterator for AngleLineIterator {
-    type Item = Point;
+    type Item = IVec2;
 
     fn next(&mut self) -> Option<Self::Item> {
         if self.finished {
@@ -282,11 +282,11 @@ impl Iterator for AngleLineIterator {
                 self.e2 = self.err * 2;
                 if self.e2 > -self.dist.y() {
                     self.err -= self.dist.y();
-                    self.point = self.point + Point::new(self.xi, 0);
+                    self.point = self.point + IVec2::new(self.xi, 0);
                 }
                 if self.e2 < self.dist.x() {
                     self.err += self.dist.x();
-                    self.point = self.point + Point::new(0, self.yi);
+                    self.point = self.point + IVec2::new(0, self.yi);
                 }
             }
             Some(result)
@@ -447,7 +447,7 @@ mod test {
         #[derive(Debug)]
         struct TestCase {
             line: Line,
-            unit: Point,
+            unit: IVec2,
         }
 
         let test_cases = vec![
@@ -492,7 +492,7 @@ mod test {
             ];
 
             for iter in iters {
-                let mut current = Point::default();
+                let mut current = IVec2::default();
                 while let Some(p) = iter.peek() {
                     assert_eq!(p, current, "{:?}, Iter: {:?}", test_case, iter);
                     let n = iter.next().unwrap();
@@ -519,8 +519,8 @@ mod test {
         #[derive(Debug)]
         struct SeekBoundsOp {
             bounds: IRect,
-            expected_result: Option<Point>,
-            expected_next: Option<Point>,
+            expected_result: Option<IVec2>,
+            expected_next: Option<IVec2>,
         }
 
         let test_cases = vec![
@@ -730,8 +730,8 @@ mod test {
         ];
         for test_case in test_cases {
             let line = Line::new(
-                Point::new(test_case.0, test_case.1),
-                Point::new(test_case.2, test_case.3),
+                IVec2::new(test_case.0, test_case.1),
+                IVec2::new(test_case.2, test_case.3),
             );
             let mut it = AngleLineIterator::new(&line);
             plot_line(

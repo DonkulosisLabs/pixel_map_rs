@@ -1,7 +1,7 @@
 use std::fmt::Debug;
 
 use super::{
-    Children, ICircle, IRect, PNode, Point, RayCast, RayCastContext, RayCastQuery, RayCastResult,
+    Children, ICircle, IRect, IVec2, PNode, RayCast, RayCastContext, RayCastQuery, RayCastResult,
     Region,
 };
 use num_traits::{NumCast, Unsigned};
@@ -55,7 +55,7 @@ impl<T: Copy + PartialEq, U: Unsigned + NumCast + Copy + Debug> PixelMap<T, U> {
     #[inline]
     pub fn get_pixel<P>(&self, point: P) -> Option<T>
     where
-        P: Into<Point>,
+        P: Into<IVec2>,
     {
         let point = point.into();
         if self.root.region().contains(point) {
@@ -70,7 +70,7 @@ impl<T: Copy + PartialEq, U: Unsigned + NumCast + Copy + Debug> PixelMap<T, U> {
     #[inline]
     pub fn set_pixel<P>(&mut self, point: P, value: T) -> bool
     where
-        P: Into<Point>,
+        P: Into<IVec2>,
     {
         let point = point.into();
         if self.root.region().contains(point) {
@@ -193,17 +193,22 @@ impl<T: Copy + PartialEq, U: Unsigned + NumCast + Copy + Debug> PixelMap<T, U> {
         self.root.clear_dirty();
     }
 
-    pub fn triangle_mesh_in_rect<F>(&self, rect: &IRect, mut predicate: F) -> (Vec<Point>, Vec<u32>)
+    pub fn triangle_mesh_in_rect<F>(
+        &self,
+        rect: &IRect,
+        offset: IVec2,
+        mut predicate: F,
+    ) -> (Vec<IVec2>, Vec<u32>)
     where
         F: FnMut(&PNode<T, U>, &IRect) -> bool,
     {
-        let mut vertices: Vec<Point> = Vec::with_capacity(1024);
+        let mut vertices: Vec<IVec2> = Vec::with_capacity(1024);
         let mut indices: Vec<u32> = Vec::with_capacity(1024);
 
         self.visit_in_rect(rect, |node, sub_rect| {
             debug_assert!(!sub_rect.is_empty());
             if predicate(node, sub_rect) {
-                sub_rect.append_mesh_data(&mut vertices, &mut indices);
+                sub_rect.append_mesh_data(&mut vertices, &mut indices, offset);
             }
         });
 
@@ -281,7 +286,7 @@ impl<T: Copy + PartialEq, U: Unsigned + NumCast + Copy + Debug> PixelMap<T, U> {
     /// ```
     pub fn combine<P, F>(&mut self, other: &Self, offset: P, combiner: F)
     where
-        P: Into<Point>,
+        P: Into<IVec2>,
         F: Fn(&T, &T) -> T,
     {
         let offset = offset.into();

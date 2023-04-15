@@ -1,4 +1,4 @@
-use super::{Line, Point};
+use super::{IVec2, Line};
 
 // Adapted from: https://github.com/ucarion/line_intersection
 
@@ -98,17 +98,17 @@ impl LineInterval {
     }
 
     #[inline]
-    fn cross(a: &Point, b: (f32, f32)) -> f32 {
+    fn cross(a: &IVec2, b: (f32, f32)) -> f32 {
         a.x() as f32 * b.1 - a.y() as f32 * b.0
     }
 
     #[inline]
-    fn div(a: &Point, b: f32) -> (f32, f32) {
+    fn div(a: &IVec2, b: f32) -> (f32, f32) {
         (a.x() as f32 / b, a.y() as f32 / b)
     }
 
     #[inline]
-    fn t_coord_to_point(p: Point, r: Point, t: f32) -> Point {
+    fn t_coord_to_point(p: IVec2, r: IVec2, t: f32) -> IVec2 {
         (
             p.x() + (t * r.x() as f32) as i32,
             p.y() + (t * r.y() as f32) as i32,
@@ -121,7 +121,7 @@ impl LineInterval {
 pub enum LineRelation {
     /// The line intervals are not parallel (or anti-parallel), and "meet" each other at exactly
     /// one point.
-    DivergentIntersecting(Point),
+    DivergentIntersecting(IVec2),
     /// The line intervals are not parallel (or anti-parallel), and do not intersect; they "miss"
     /// each other.
     DivergentDisjoint,
@@ -133,7 +133,7 @@ pub enum LineRelation {
 }
 
 impl LineRelation {
-    pub fn unique_intersection(self) -> Option<Point> {
+    pub fn unique_intersection(self) -> Option<IVec2> {
         match self {
             LineRelation::DivergentIntersecting(p) => Some(p),
             _ => None,

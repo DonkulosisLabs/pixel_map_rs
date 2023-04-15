@@ -1,20 +1,20 @@
-use super::{IRect, Point, Region};
+use super::{IRect, IVec2, Region};
 use num_traits::{NumCast, Unsigned};
 use std::ops::{Index, IndexMut, Range};
 
 #[derive(Debug, Clone)]
 pub struct IPolygon {
-    points: Vec<Point>,
+    points: Vec<IVec2>,
 }
 
 impl IPolygon {
     #[inline]
-    pub fn new(points: Vec<Point>) -> Self {
+    pub fn new(points: Vec<IVec2>) -> Self {
         Self { points }
     }
 
     #[inline]
-    pub fn points(&self) -> &[Point] {
+    pub fn points(&self) -> &[IVec2] {
         &self.points
     }
 
@@ -42,9 +42,9 @@ impl From<&IRect> for IPolygon {
         Self {
             points: vec![
                 rect.min(),
-                Point::new(rect.max().x, rect.min().y),
+                IVec2::new(rect.max().x, rect.min().y),
                 rect.max(),
-                Point::new(rect.min().x, rect.max().y),
+                IVec2::new(rect.min().x, rect.max().y),
             ],
         }
     }
@@ -63,16 +63,16 @@ impl<U: Unsigned + NumCast + Copy> From<&Region<U>> for IPolygon {
         Self {
             points: vec![
                 region.point(),
-                Point::new(region.end_point().x, region.point().y),
+                IVec2::new(region.end_point().x, region.point().y),
                 region.end_point(),
-                Point::new(region.point().x, region.end_point().y),
+                IVec2::new(region.point().x, region.end_point().y),
             ],
         }
     }
 }
 
 impl Index<usize> for IPolygon {
-    type Output = Point;
+    type Output = IVec2;
 
     #[inline]
     fn index(&self, index: usize) -> &Self::Output {
@@ -81,7 +81,7 @@ impl Index<usize> for IPolygon {
 }
 
 impl Index<Range<usize>> for IPolygon {
-    type Output = [Point];
+    type Output = [IVec2];
 
     #[inline]
     fn index(&self, index: Range<usize>) -> &Self::Output {

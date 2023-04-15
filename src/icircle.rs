@@ -1,9 +1,9 @@
-use super::{IRect, Point};
+use super::{IRect, IVec2};
 
 /// A circle represented by a center point, in integer coordinates, and a radius.
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub struct ICircle {
-    point: Point,
+    point: IVec2,
     radius: u32,
 }
 
@@ -11,7 +11,7 @@ impl ICircle {
     #[inline]
     pub fn new<P>(point: P, radius: u32) -> Self
     where
-        P: Into<Point>,
+        P: Into<IVec2>,
     {
         Self {
             point: point.into(),
@@ -30,7 +30,7 @@ impl ICircle {
     }
 
     #[inline]
-    pub fn point(&self) -> Point {
+    pub fn point(&self) -> IVec2 {
         self.point
     }
 
@@ -42,7 +42,7 @@ impl ICircle {
     #[inline]
     pub fn contains<P>(&self, point: P) -> bool
     where
-        P: Into<Point>,
+        P: Into<IVec2>,
     {
         let d = point.into() - self.point;
         d.x() * d.x() + d.y() * d.y() <= self.radius as i32 * self.radius as i32

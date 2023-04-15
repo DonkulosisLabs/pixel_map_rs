@@ -2,12 +2,12 @@ use super::Direction;
 use std::ops::{Add, Div, Mul, Neg, Sub};
 
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq, Hash)]
-pub struct Point {
+pub struct IVec2 {
     pub(super) x: i32,
     pub(super) y: i32,
 }
 
-impl Point {
+impl IVec2 {
     pub const ZERO: Self = Self { x: 0, y: 0 };
     pub const ONE: Self = Self { x: 1, y: 1 };
     pub const NEG_ONE: Self = Self { x: -1, y: -1 };
@@ -42,57 +42,57 @@ impl Point {
     }
 
     #[inline]
-    pub fn distance_squared_to(&self, other: Point) -> f32 {
+    pub fn distance_squared_to(&self, other: IVec2) -> f32 {
         let x = other.x() as f32 - self.x() as f32;
         let y = other.y() as f32 - self.y() as f32;
         (x * x + y * y).abs()
     }
 
     #[inline]
-    pub fn distance_to(&self, other: Point) -> f32 {
+    pub fn distance_to(&self, other: IVec2) -> f32 {
         self.distance_squared_to(other).sqrt()
     }
 
     #[inline]
-    pub fn min(&self, other: Point) -> Self {
+    pub fn min(&self, other: IVec2) -> Self {
         Self::new(self.x.min(other.x), self.y.min(other.y))
     }
 
     #[inline]
-    pub fn max(&self, other: Point) -> Self {
+    pub fn max(&self, other: IVec2) -> Self {
         Self::new(self.x.max(other.x), self.y.max(other.y))
     }
 }
 
-impl From<(i32, i32)> for Point {
+impl From<(i32, i32)> for IVec2 {
     #[inline]
     fn from((x, y): (i32, i32)) -> Self {
         Self::new(x, y)
     }
 }
 
-impl From<[i32; 2]> for Point {
+impl From<[i32; 2]> for IVec2 {
     #[inline]
     fn from([x, y]: [i32; 2]) -> Self {
         Self::new(x, y)
     }
 }
 
-impl From<Point> for (i32, i32) {
+impl From<IVec2> for (i32, i32) {
     #[inline]
-    fn from(point: Point) -> Self {
+    fn from(point: IVec2) -> Self {
         (point.x, point.y)
     }
 }
 
-impl From<Point> for [i32; 2] {
+impl From<IVec2> for [i32; 2] {
     #[inline]
-    fn from(point: Point) -> Self {
+    fn from(point: IVec2) -> Self {
         [point.x, point.y]
     }
 }
 
-impl Neg for Point {
+impl Neg for IVec2 {
     type Output = Self;
 
     #[inline]
@@ -101,7 +101,7 @@ impl Neg for Point {
     }
 }
 
-impl Add for Point {
+impl Add for IVec2 {
     type Output = Self;
 
     #[inline]
@@ -110,7 +110,7 @@ impl Add for Point {
     }
 }
 
-impl Add<i32> for Point {
+impl Add<i32> for IVec2 {
     type Output = Self;
 
     #[inline]
@@ -119,7 +119,7 @@ impl Add<i32> for Point {
     }
 }
 
-impl Sub for Point {
+impl Sub for IVec2 {
     type Output = Self;
 
     #[inline]
@@ -128,7 +128,7 @@ impl Sub for Point {
     }
 }
 
-impl Sub<i32> for Point {
+impl Sub<i32> for IVec2 {
     type Output = Self;
 
     #[inline]
@@ -137,7 +137,7 @@ impl Sub<i32> for Point {
     }
 }
 
-impl Mul for Point {
+impl Mul for IVec2 {
     type Output = Self;
 
     #[inline]
@@ -146,7 +146,7 @@ impl Mul for Point {
     }
 }
 
-impl Mul<i32> for Point {
+impl Mul<i32> for IVec2 {
     type Output = Self;
 
     #[inline]
@@ -155,7 +155,7 @@ impl Mul<i32> for Point {
     }
 }
 
-impl Div for Point {
+impl Div for IVec2 {
     type Output = Self;
 
     #[inline]
@@ -164,7 +164,7 @@ impl Div for Point {
     }
 }
 
-impl Div<i32> for Point {
+impl Div<i32> for IVec2 {
     type Output = Self;
 
     #[inline]

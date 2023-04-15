@@ -1,5 +1,5 @@
 use super::region::Region;
-use super::{Line, Point};
+use super::{IVec2, Line};
 
 use num_traits::{NumCast, Unsigned};
 use std::ops;
@@ -7,22 +7,22 @@ use std::ops;
 /// An immutable rectangle defined by a minimum and maximum point, in integer coordinates.
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub struct IRect {
-    min: Point,
-    max: Point,
+    min: IVec2,
+    max: IVec2,
 }
 
 impl IRect {
     pub const ZERO: Self = Self {
-        min: Point::ZERO,
-        max: Point::ZERO,
+        min: IVec2::ZERO,
+        max: IVec2::ZERO,
     };
     pub const ONE: Self = Self {
-        min: Point::ONE,
-        max: Point::ONE,
+        min: IVec2::ONE,
+        max: IVec2::ONE,
     };
     pub const NEG_ONE: Self = Self {
-        min: Point::NEG_ONE,
-        max: Point::NEG_ONE,
+        min: IVec2::NEG_ONE,
+        max: IVec2::NEG_ONE,
     };
 
     #[inline]
@@ -33,7 +33,7 @@ impl IRect {
     #[inline]
     pub fn from_corners<P>(min: P, max: P) -> Self
     where
-        P: Into<Point>,
+        P: Into<IVec2>,
     {
         let min = min.into();
         let max = max.into();
@@ -47,20 +47,20 @@ impl IRect {
     #[inline]
     pub fn centered_at<P>(point: P, width: u32, height: u32) -> Self
     where
-        P: Into<Point>,
+        P: Into<IVec2>,
     {
         let point = point.into();
         if width <= 1 || height <= 1 {
             return Self {
                 min: point,
-                max: point + Point::new(width as i32, height as i32),
+                max: point + IVec2::new(width as i32, height as i32),
             };
         }
 
         let width_half = width as i32 / 2;
         let height_half = height as i32 / 2;
-        let min = point - Point::new(width_half, height_half);
-        let max = point + Point::new(width_half, height_half);
+        let min = point - IVec2::new(width_half, height_half);
+        let max = point + IVec2::new(width_half, height_half);
 
         Self::from_corners(min, max)
     }
@@ -86,17 +86,17 @@ impl IRect {
     }
 
     #[inline]
-    pub fn min(&self) -> Point {
+    pub fn min(&self) -> IVec2 {
         self.min
     }
 
     #[inline]
-    pub fn max(&self) -> Point {
+    pub fn max(&self) -> IVec2 {
         self.max
     }
 
     #[inline]
-    pub fn center(&self) -> Point {
+    pub fn center(&self) -> IVec2 {
         let half_max = self.max / 2;
         self.min + half_max
     }
@@ -112,7 +112,7 @@ impl IRect {
     }
 
     #[inline]
-    pub fn size(&self) -> Point {
+    pub fn size(&self) -> IVec2 {
         self.max - self.min
     }
 
@@ -140,22 +140,22 @@ impl IRect {
     pub fn inclusive(&self) -> Self {
         Self {
             min: self.min,
-            max: self.max + Point::ONE,
+            max: self.max + IVec2::ONE,
         }
     }
 
     #[inline]
     pub fn grow(&self, amount: i32) -> Self {
         Self {
-            min: self.min - Point::new(amount, amount),
-            max: self.max + Point::new(amount, amount),
+            min: self.min - IVec2::new(amount, amount),
+            max: self.max + IVec2::new(amount, amount),
         }
     }
 
     #[inline]
     pub fn contains<P>(&self, point: P) -> bool
     where
-        P: Into<Point>,
+        P: Into<IVec2>,
     {
         let point = point.into();
         point.x() >= self.left_bounds()
@@ -167,7 +167,7 @@ impl IRect {
     #[inline]
     pub fn distance_squared_to<P>(&self, point: P) -> f32
     where
-        P: Into<Point>,
+        P: Into<IVec2>,
     {
         let point = point.into();
 
@@ -196,7 +196,7 @@ impl IRect {
     #[inline]
     pub fn distance_to<P>(&self, point: P) -> f32
     where
-        P: Into<Point>,
+        P: Into<IVec2>,
     {
         self.distance_squared_to(point).sqrt()
     }
@@ -226,7 +226,7 @@ impl IRect {
     }
 
     #[inline]
-    pub fn union_point(&self, other: Point) -> Self {
+    pub fn union_point(&self, other: IVec2) -> Self {
         Self {
             min: self.min.min(other),
             max: self.max.max(other),
@@ -252,39 +252,44 @@ impl IRect {
         let width = self.max.x - self.min.x;
         let height = self.max.y - self.min.y;
         [
-            Line::new(self.min, self.min + Point::new(width, 0)),
-            Line::new(self.min + Point::new(width, 0), self.max),
-            Line::new(self.max, self.min + Point::new(0, height)),
-            Line::new(self.min + Point::new(0, height), self.min),
+            Line::new(self.min, self.min + IVec2::new(width, 0)),
+            Line::new(self.min + IVec2::new(width, 0), self.max),
+            Line::new(self.max, self.min + IVec2::new(0, height)),
+            Line::new(self.min + IVec2::new(0, height), self.min),
         ]
     }
 
     #[inline]
-    pub fn append_mesh_data(&self, vertices: &mut Vec<Point>, indices: &mut Vec<u32>) {
+    pub fn append_mesh_data(
+        &self,
+        vertices: &mut Vec<IVec2>,
+        indices: &mut Vec<u32>,
+        offset: IVec2,
+    ) {
         let index = vertices.len() as u32;
         vertices.extend([
-            self.min,
-            Point::new(self.max.x, self.min.y),
-            self.max,
-            Point::new(self.min.x, self.max.y),
+            self.min + offset,
+            IVec2::new(self.max.x, self.min.y) + offset,
+            self.max + offset,
+            IVec2::new(self.min.x, self.max.y) + offset,
         ]);
 
         indices.extend([index, index + 1, index + 2, index, index + 2, index + 3]);
     }
 }
 
-impl ops::Add<Point> for IRect {
+impl ops::Add<IVec2> for IRect {
     type Output = Self;
 
-    fn add(self, rhs: Point) -> Self::Output {
+    fn add(self, rhs: IVec2) -> Self::Output {
         Self::from_corners(self.min + rhs, self.max + rhs)
     }
 }
 
-impl ops::Sub<Point> for IRect {
+impl ops::Sub<IVec2> for IRect {
     type Output = Self;
 
-    fn sub(self, rhs: Point) -> Self::Output {
+    fn sub(self, rhs: IVec2) -> Self::Output {
         Self::from_corners(self.min - rhs, self.max - rhs)
     }
 }

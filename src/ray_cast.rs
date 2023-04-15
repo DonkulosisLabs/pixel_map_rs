@@ -1,5 +1,5 @@
 use super::line_iterator::LineIterator;
-use super::{Line, Point};
+use super::{IVec2, Line};
 
 #[derive(Debug, Default, Clone, Copy, Eq, PartialEq)]
 pub struct RayCastQuery {
@@ -14,7 +14,7 @@ impl RayCastQuery {
 
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct RayCastResult {
-    pub collision_point: Option<Point>,
+    pub collision_point: Option<IVec2>,
     pub distance: f32,
     pub traversed: u32,
 }

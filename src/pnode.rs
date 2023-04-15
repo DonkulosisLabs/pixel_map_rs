@@ -1,6 +1,6 @@
 use super::region::Region;
 use super::{
-    ICircle, IRect, Line, Point, Quadrant, RayCast, RayCastContext, RayCastQuery, RayCastResult,
+    ICircle, IRect, IVec2, Quadrant, RayCast, RayCastContext, RayCastQuery, RayCastResult,
 };
 use num_traits::{NumCast, Unsigned};
 use std::fmt::Debug;
@@ -282,7 +282,7 @@ impl<T: Copy + PartialEq, U: Unsigned + NumCast + Copy + Debug> PNode<T, U> {
 
     // Get the node that contains the given coordinates. The coordinates must be
     // known to be within the bounds of this node.
-    pub(super) fn find_node(&self, point: Point, traversed: &mut usize) -> &PNode<T, U> {
+    pub(super) fn find_node(&self, point: IVec2, traversed: &mut usize) -> &PNode<T, U> {
         *traversed += 1;
         if let Some(children) = &self.children {
             let q = self.region.quadrant_for(point);
@@ -338,7 +338,7 @@ impl<T: Copy + PartialEq, U: Unsigned + NumCast + Copy + Debug> PNode<T, U> {
         }
     }
 
-    pub(super) fn set_pixel(&mut self, point: Point, pixel_size: u8, value: T) -> bool {
+    pub(super) fn set_pixel(&mut self, point: IVec2, pixel_size: u8, value: T) -> bool {
         if self.region.contains(point) {
             if self.region.is_unit(pixel_size) {
                 self.set_value(value);

@@ -1,18 +1,18 @@
 use super::line_interval::LineInterval;
 use super::line_iterator::{plot_line, LineIterator};
-use super::{Direction, IRect, Point};
+use super::{Direction, IRect, IVec2};
 
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
 pub struct Line {
-    start: Point,
-    end: Point,
+    start: IVec2,
+    end: IVec2,
 }
 
 impl Line {
     #[inline]
     pub fn new<P>(start: P, end: P) -> Self
     where
-        P: Into<Point>,
+        P: Into<IVec2>,
     {
         Self {
             start: start.into(),
@@ -21,12 +21,12 @@ impl Line {
     }
 
     #[inline]
-    pub fn start(&self) -> Point {
+    pub fn start(&self) -> IVec2 {
         self.start
     }
 
     #[inline]
-    pub fn end(&self) -> Point {
+    pub fn end(&self) -> IVec2 {
         self.end
     }
 
@@ -45,7 +45,7 @@ impl Line {
         self.rotate_around(self.start, radians)
     }
 
-    pub fn rotate_around(&self, center: Point, radians: f32) -> Self {
+    pub fn rotate_around(&self, center: IVec2, radians: f32) -> Self {
         let cos_theta = f32::cos(radians);
         let sin_theta = f32::sin(radians);
 
@@ -67,7 +67,7 @@ impl Line {
     #[inline]
     pub fn contains<P>(&self, point: P) -> bool
     where
-        P: Into<Point>,
+        P: Into<IVec2>,
     {
         let point = point.into();
         let d = self.start.distance_to(point) + point.distance_to(self.end) - self.length();
@@ -125,7 +125,7 @@ impl Line {
     }
 
     #[inline]
-    pub fn intersects_line(&self, other: &Line) -> Option<Point> {
+    pub fn intersects_line(&self, other: &Line) -> Option<IVec2> {
         let seg1 = LineInterval::line_segment(*self);
         let seg2 = LineInterval::line_segment(*other);
         seg1.relate(&seg2).unique_intersection()
@@ -161,7 +161,7 @@ impl Line {
 }
 
 impl IntoIterator for Line {
-    type Item = Point;
+    type Item = IVec2;
     type IntoIter = LineIterator;
 
     fn into_iter(self) -> Self::IntoIter {

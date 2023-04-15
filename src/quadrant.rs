@@ -1,4 +1,4 @@
-use super::Point;
+use super::IVec2;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Quadrant {
@@ -12,7 +12,7 @@ impl Quadrant {
     #[inline]
     pub fn for_point<P>(point: P, center: i32) -> Quadrant
     where
-        P: Into<Point>,
+        P: Into<IVec2>,
     {
         let point = point.into();
         if point.x() < center {

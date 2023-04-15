@@ -1,5 +1,5 @@
 use super::quadrant::Quadrant;
-use super::Point;
+use super::IVec2;
 use num_traits::{NumCast, Unsigned};
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -26,14 +26,14 @@ impl<U: Unsigned + NumCast + Copy> Region<U> {
     }
 
     #[inline]
-    pub fn point(&self) -> Point {
+    pub fn point(&self) -> IVec2 {
         let x = num_traits::cast::cast(self.x).unwrap();
         let y = num_traits::cast::cast(self.y).unwrap();
         (x, y).into()
     }
 
     #[inline]
-    pub fn end_point(&self) -> Point {
+    pub fn end_point(&self) -> IVec2 {
         let size: i32 = num_traits::cast::cast(self.size).unwrap();
         self.point() + size - 1
     }
@@ -56,7 +56,7 @@ impl<U: Unsigned + NumCast + Copy> Region<U> {
     #[inline]
     pub fn contains<P>(&self, point: P) -> bool
     where
-        P: Into<Point>,
+        P: Into<IVec2>,
     {
         let point = point.into();
         let x: i32 = num_traits::cast(self.x).unwrap();
@@ -68,7 +68,7 @@ impl<U: Unsigned + NumCast + Copy> Region<U> {
     #[inline]
     pub fn quadrant_for<P>(&self, point: P) -> Quadrant
     where
-        P: Into<Point>,
+        P: Into<IVec2>,
     {
         let point = point.into();
         let center = num_traits::cast(self.center()).unwrap();
