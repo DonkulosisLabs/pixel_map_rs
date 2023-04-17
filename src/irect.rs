@@ -11,6 +11,12 @@ pub struct IRect {
     max: IVec2,
 }
 
+impl Default for IRect {
+    fn default() -> Self {
+        Self::ZERO
+    }
+}
+
 impl IRect {
     pub const ZERO: Self = Self {
         min: IVec2::ZERO,
@@ -260,7 +266,7 @@ impl IRect {
     }
 
     #[inline]
-    pub fn append_mesh_data(
+    pub fn append_trimesh_data(
         &self,
         vertices: &mut Vec<IVec2>,
         indices: &mut Vec<u32>,
@@ -275,6 +281,29 @@ impl IRect {
         ]);
 
         indices.extend([index, index + 1, index + 2, index, index + 2, index + 3]);
+    }
+
+    #[inline]
+    pub fn append_polyline_data(
+        &self,
+        vertices: &mut Vec<IVec2>,
+        indices: &mut Vec<[u32; 2]>,
+        offset: IVec2,
+    ) {
+        let index = vertices.len() as u32;
+        vertices.extend([
+            self.min + offset,
+            IVec2::new(self.max.x, self.min.y) + offset,
+            self.max + offset,
+            IVec2::new(self.min.x, self.max.y) + offset,
+        ]);
+
+        indices.extend([
+            [index, index + 1],
+            [index + 1, index + 2],
+            [index + 2, index + 3],
+            [index + 3, index],
+        ]);
     }
 }
 
@@ -456,5 +485,43 @@ mod test {
         assert_eq!(rect.distance_to((3, 3)), 0.0);
         assert_eq!(rect.distance_to((4, 4)), 1.4142135);
         assert_eq!(rect.distance_to((5, 5)), 2.828427);
+    }
+
+    #[test]
+    fn test_append_trimesh_data() {
+        let rect = IRect::new(1, 1, 3, 3);
+        let mut vertices = Vec::new();
+        let mut indices = Vec::new();
+        rect.append_trimesh_data(&mut vertices, &mut indices, IVec2::default());
+        assert_eq!(vertices.len(), 4);
+        assert_eq!(indices.len(), 6);
+        assert_eq!(vertices[0], (1, 1).into());
+        assert_eq!(vertices[1], (3, 1).into());
+        assert_eq!(vertices[2], (3, 3).into());
+        assert_eq!(vertices[3], (1, 3).into());
+        assert_eq!(indices[0], 0);
+        assert_eq!(indices[1], 1);
+        assert_eq!(indices[2], 2);
+        assert_eq!(indices[3], 0);
+        assert_eq!(indices[4], 2);
+        assert_eq!(indices[5], 3);
+    }
+
+    #[test]
+    fn test_append_polyline_data() {
+        let rect = IRect::new(1, 1, 3, 3);
+        let mut vertices = Vec::new();
+        let mut indices = Vec::new();
+        rect.append_polyline_data(&mut vertices, &mut indices, IVec2::default());
+        assert_eq!(vertices.len(), 4);
+        assert_eq!(vertices[0], (1, 1).into());
+        assert_eq!(vertices[1], (3, 1).into());
+        assert_eq!(vertices[2], (3, 3).into());
+        assert_eq!(vertices[3], (1, 3).into());
+        assert_eq!(indices.len(), 4);
+        assert_eq!(indices[0], [0, 1]);
+        assert_eq!(indices[1], [1, 2]);
+        assert_eq!(indices[2], [2, 3]);
+        assert_eq!(indices[3], [3, 0]);
     }
 }

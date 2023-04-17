@@ -193,7 +193,7 @@ impl<T: Copy + PartialEq, U: Unsigned + NumCast + Copy + Debug> PixelMap<T, U> {
         self.root.clear_dirty();
     }
 
-    pub fn triangle_mesh_in_rect<F>(
+    pub fn trimesh_in_rect<F>(
         &self,
         rect: &IRect,
         offset: IVec2,
@@ -208,7 +208,29 @@ impl<T: Copy + PartialEq, U: Unsigned + NumCast + Copy + Debug> PixelMap<T, U> {
         self.visit_in_rect(rect, |node, sub_rect| {
             debug_assert!(!sub_rect.is_empty());
             if predicate(node, sub_rect) {
-                sub_rect.append_mesh_data(&mut vertices, &mut indices, offset);
+                sub_rect.append_trimesh_data(&mut vertices, &mut indices, offset);
+            }
+        });
+
+        (vertices, indices)
+    }
+
+    pub fn polylines_in_rect<F>(
+        &self,
+        rect: &IRect,
+        offset: IVec2,
+        mut predicate: F,
+    ) -> (Vec<IVec2>, Vec<[u32; 2]>)
+    where
+        F: FnMut(&PNode<T, U>, &IRect) -> bool,
+    {
+        let mut vertices: Vec<IVec2> = Vec::with_capacity(1024);
+        let mut indices: Vec<[u32; 2]> = Vec::with_capacity(1024);
+
+        self.visit_in_rect(rect, |node, sub_rect| {
+            debug_assert!(!sub_rect.is_empty());
+            if predicate(node, sub_rect) {
+                sub_rect.append_polyline_data(&mut vertices, &mut indices, offset);
             }
         });
 
