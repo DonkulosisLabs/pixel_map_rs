@@ -1,7 +1,8 @@
-use super::region::Region;
 use super::{
-    ICircle, IRect, IVec2, Quadrant, RayCast, RayCastContext, RayCastQuery, RayCastResult,
+    ICircle, IRect, Quadrant, RayCast, RayCastContext, RayCastQuery, RayCastResult, Region,
 };
+use crate::distance_to;
+use glam::IVec2;
 use num_traits::{NumCast, Unsigned};
 use std::fmt::Debug;
 
@@ -321,7 +322,7 @@ impl<T: Copy + PartialEq, U: Unsigned + NumCast + Copy + Debug> PNode<T, U> {
                                 continue;
                             }
                             RayCast::Hit => {
-                                let distance = query.line.start().distance_to(current_point);
+                                let distance = distance_to(query.line.start(), current_point);
                                 let result = RayCastResult {
                                     collision_point: Some(current_point),
                                     distance,

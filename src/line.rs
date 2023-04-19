@@ -1,6 +1,7 @@
 use super::line_interval::LineInterval;
 use super::line_iterator::{plot_line, LineIterator};
-use super::{Direction, IRect, IVec2};
+use super::{Direction, IRect};
+use glam::IVec2;
 
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
 pub struct Line {
@@ -32,12 +33,12 @@ impl Line {
 
     #[inline]
     pub fn length_squared(&self) -> f32 {
-        self.start.distance_squared_to(self.end)
+        distance_squared_to(self.start, self.end)
     }
 
     #[inline]
     pub fn length(&self) -> f32 {
-        self.start.distance_to(self.end)
+        distance_to(self.start, self.end)
     }
 
     #[inline]
@@ -70,13 +71,13 @@ impl Line {
         P: Into<IVec2>,
     {
         let point = point.into();
-        let d = self.start.distance_to(point) + point.distance_to(self.end) - self.length();
+        let d = distance_to(self.start, point) + distance_to(point, self.end) - self.length();
         -f32::EPSILON < d && d < f32::EPSILON
     }
 
     #[inline]
     pub fn is_axis_aligned(&self) -> bool {
-        self.start.x() == self.end.x() || self.start.y() == self.end.y()
+        self.start.x == self.end.x || self.start.y == self.end.y
     }
 
     #[inline]
@@ -86,14 +87,14 @@ impl Line {
 
     #[inline]
     pub fn axis_alignment(&self) -> Option<Direction> {
-        if self.start.x() == self.end.x() {
-            if self.start.y() < self.end.y() {
+        if self.start.x == self.end.x {
+            if self.start.y < self.end.y {
                 Some(Direction::North)
             } else {
                 Some(Direction::South)
             }
-        } else if self.start.y() == self.end.y() {
-            if self.start.x() > self.end.x() {
+        } else if self.start.y == self.end.y {
+            if self.start.x > self.end.x {
                 Some(Direction::West)
             } else {
                 Some(Direction::East)
@@ -105,8 +106,8 @@ impl Line {
 
     #[inline]
     pub fn diagonal_axis_alignment(&self) -> Option<Direction> {
-        let dx = self.end.x() - self.start.x();
-        let dy = self.end.y() - self.start.y();
+        let dx = self.end.x - self.start.x;
+        let dy = self.end.y - self.start.y;
         if dx == dy {
             if dx > 0 {
                 Some(Direction::NorthEast)
@@ -146,13 +147,7 @@ impl Line {
     where
         F: FnMut(i32, i32),
     {
-        plot_line(
-            self.start.x(),
-            self.start.y(),
-            self.end.x(),
-            self.end.y(),
-            visitor,
-        );
+        plot_line(self.start.x, self.start.y, self.end.x, self.end.y, visitor);
     }
 
     pub fn iter(&self) -> LineIterator {
@@ -167,6 +162,18 @@ impl IntoIterator for Line {
     fn into_iter(self) -> Self::IntoIter {
         LineIterator::new(&self)
     }
+}
+
+#[inline]
+pub fn distance_squared_to(a: IVec2, b: IVec2) -> f32 {
+    let x = b.x as f32 - a.x as f32;
+    let y = b.y as f32 - a.y as f32;
+    (x * x + y * y).abs()
+}
+
+#[inline]
+pub fn distance_to(a: IVec2, b: IVec2) -> f32 {
+    distance_squared_to(a, b).sqrt()
 }
 
 #[cfg(test)]

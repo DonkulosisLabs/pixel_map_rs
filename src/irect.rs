@@ -1,5 +1,6 @@
 use super::region::Region;
-use super::{IVec2, Line};
+use super::Line;
+use glam::IVec2;
 
 use num_traits::{NumCast, Unsigned};
 use std::ops;
@@ -83,12 +84,12 @@ impl IRect {
 
     #[inline]
     pub fn x(&self) -> i32 {
-        self.min.x()
+        self.min.x
     }
 
     #[inline]
     pub fn y(&self) -> i32 {
-        self.min.y()
+        self.min.y
     }
 
     #[inline]
@@ -164,10 +165,10 @@ impl IRect {
         P: Into<IVec2>,
     {
         let point = point.into();
-        point.x() >= self.left_bounds()
-            && point.x() <= self.right_bounds()
-            && point.y() <= self.top_bounds()
-            && point.y() >= self.bottom_bounds()
+        point.x >= self.left_bounds()
+            && point.x <= self.right_bounds()
+            && point.y <= self.top_bounds()
+            && point.y >= self.bottom_bounds()
     }
 
     #[inline]
@@ -392,10 +393,10 @@ mod test {
     #[test]
     fn test_centered_at() {
         let rect = IRect::centered_at((1, 1), 2, 2);
-        assert_eq!(rect.min.x(), 0);
-        assert_eq!(rect.min.y(), 0);
-        assert_eq!(rect.max.x(), 2);
-        assert_eq!(rect.max.y(), 2);
+        assert_eq!(rect.min.x, 0);
+        assert_eq!(rect.min.y, 0);
+        assert_eq!(rect.max.x, 2);
+        assert_eq!(rect.max.y, 2);
     }
 
     #[test]

@@ -1,5 +1,5 @@
 use super::quadrant::Quadrant;
-use super::IVec2;
+use glam::IVec2;
 use num_traits::{NumCast, Unsigned};
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -62,7 +62,7 @@ impl<U: Unsigned + NumCast + Copy> Region<U> {
         let x: i32 = num_traits::cast(self.x).unwrap();
         let y: i32 = num_traits::cast(self.y).unwrap();
         let size: i32 = num_traits::cast(self.size).unwrap();
-        point.x() >= x && point.x() < x + size && point.y() >= y && point.y() < y + size
+        point.x >= x && point.x < x + size && point.y >= y && point.y < y + size
     }
 
     #[inline]

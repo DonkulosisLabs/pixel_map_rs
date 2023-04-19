@@ -1,4 +1,4 @@
-use super::IVec2;
+use glam::IVec2;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Quadrant {
@@ -15,13 +15,13 @@ impl Quadrant {
         P: Into<IVec2>,
     {
         let point = point.into();
-        if point.x() < center {
-            if point.y() >= center {
+        if point.x < center {
+            if point.y >= center {
                 Quadrant::TopLeft
             } else {
                 Quadrant::BottomLeft
             }
-        } else if point.y() >= center {
+        } else if point.y >= center {
             Quadrant::TopRight
         } else {
             Quadrant::BottomRight

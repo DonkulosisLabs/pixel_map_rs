@@ -1,4 +1,5 @@
-use super::{IVec2, Line};
+use super::Line;
+use glam::IVec2;
 
 // Adapted from: https://github.com/ucarion/line_intersection
 
@@ -62,9 +63,9 @@ impl LineInterval {
         let r = self.line.end() - self.line.start();
         let s = other.line.end() - other.line.start();
 
-        let r_cross_s = Self::cross(&r, (s.x() as f32, s.y() as f32));
+        let r_cross_s = Self::cross(&r, (s.x as f32, s.y as f32));
         let q_minus_p = q - p;
-        let q_minus_p_cross_r = Self::cross(&q_minus_p, (r.x() as f32, r.y() as f32));
+        let q_minus_p_cross_r = Self::cross(&q_minus_p, (r.x as f32, r.y as f32));
 
         // are the lines are parallel?
         if r_cross_s == 0.0 {
@@ -99,21 +100,17 @@ impl LineInterval {
 
     #[inline]
     fn cross(a: &IVec2, b: (f32, f32)) -> f32 {
-        a.x() as f32 * b.1 - a.y() as f32 * b.0
+        a.x as f32 * b.1 - a.y as f32 * b.0
     }
 
     #[inline]
     fn div(a: &IVec2, b: f32) -> (f32, f32) {
-        (a.x() as f32 / b, a.y() as f32 / b)
+        (a.x as f32 / b, a.y as f32 / b)
     }
 
     #[inline]
     fn t_coord_to_point(p: IVec2, r: IVec2, t: f32) -> IVec2 {
-        (
-            p.x() + (t * r.x() as f32) as i32,
-            p.y() + (t * r.y() as f32) as i32,
-        )
-            .into()
+        (p.x + (t * r.x as f32) as i32, p.y + (t * r.y as f32) as i32).into()
     }
 }
 

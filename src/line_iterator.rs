@@ -1,4 +1,5 @@
-use super::{Direction, IRect, IVec2, Line};
+use super::{Direction, IRect, Line};
+use glam::IVec2;
 
 pub(super) fn plot_line<F>(x0: i32, y0: i32, x1: i32, y1: i32, mut plot: F)
 where
@@ -166,8 +167,8 @@ impl AxisLineIterator {
                 }
             }
             Direction::SouthWest => {
-                let x_distance = self.end.x() - left;
-                let y_distance = self.end.y() - bottom;
+                let x_distance = self.end.x - left;
+                let y_distance = self.end.y - bottom;
                 let (x, y) = if x_distance < y_distance {
                     (left, self.end.y - x_distance)
                 } else {
@@ -228,10 +229,10 @@ pub struct AngleLineIterator {
 impl AngleLineIterator {
     #[inline]
     pub(super) fn new(line: &Line) -> Self {
-        let x0 = line.start().x();
-        let y0 = line.start().y();
-        let x1 = line.end().x();
-        let y1 = line.end().y();
+        let x0 = line.start().x;
+        let y0 = line.start().y;
+        let x1 = line.end().x;
+        let y1 = line.end().y;
         let dist = IVec2::new(i32::abs(x1 - x0), i32::abs(y1 - y0));
         let xi = if x1 < x0 { -1 } else { 1 };
         let yi = if y1 < y0 { -1 } else { 1 };
@@ -241,7 +242,7 @@ impl AngleLineIterator {
             point: line.start(),
             xi,
             yi,
-            err: dist.x() - dist.y(),
+            err: dist.x - dist.y,
             e2: 0,
             finished: false,
         }
@@ -280,12 +281,12 @@ impl Iterator for AngleLineIterator {
                 self.finished = true;
             } else {
                 self.e2 = self.err * 2;
-                if self.e2 > -self.dist.y() {
-                    self.err -= self.dist.y();
+                if self.e2 > -self.dist.y {
+                    self.err -= self.dist.y;
                     self.point = self.point + IVec2::new(self.xi, 0);
                 }
-                if self.e2 < self.dist.x() {
-                    self.err += self.dist.x();
+                if self.e2 < self.dist.x {
+                    self.err += self.dist.x;
                     self.point = self.point + IVec2::new(0, self.yi);
                 }
             }

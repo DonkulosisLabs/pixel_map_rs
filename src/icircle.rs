@@ -1,4 +1,5 @@
-use super::{IRect, IVec2};
+use super::IRect;
+use glam::IVec2;
 
 /// A circle represented by a center point, in integer coordinates, and a radius.
 #[derive(Debug, Clone, Eq, PartialEq)]
@@ -21,12 +22,12 @@ impl ICircle {
 
     #[inline]
     pub fn x(&self) -> i32 {
-        self.point.x()
+        self.point.x
     }
 
     #[inline]
     pub fn y(&self) -> i32 {
-        self.point.y()
+        self.point.y
     }
 
     #[inline]
@@ -45,7 +46,7 @@ impl ICircle {
         P: Into<IVec2>,
     {
         let d = point.into() - self.point;
-        d.x() * d.x() + d.y() * d.y() <= self.radius as i32 * self.radius as i32
+        d.x * d.x + d.y * d.y <= self.radius as i32 * self.radius as i32
     }
 
     #[inline]

@@ -1,5 +1,6 @@
 use super::line_iterator::LineIterator;
-use super::{IVec2, Line};
+use super::Line;
+use glam::IVec2;
 
 #[derive(Debug, Default, Clone, Copy, Eq, PartialEq)]
 pub struct RayCastQuery {

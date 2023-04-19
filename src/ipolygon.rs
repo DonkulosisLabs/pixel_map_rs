@@ -1,4 +1,5 @@
-use super::{IRect, IVec2, Region};
+use super::{IRect, Region};
+use glam::IVec2;
 use num_traits::{NumCast, Unsigned};
 use std::ops::{Index, IndexMut, Range};
 

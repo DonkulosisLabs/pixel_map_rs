@@ -1,10 +1,9 @@
-use std::fmt::Debug;
-
 use super::{
-    Children, ICircle, IRect, IVec2, PNode, RayCast, RayCastContext, RayCastQuery, RayCastResult,
-    Region,
+    Children, ICircle, IRect, PNode, RayCast, RayCastContext, RayCastQuery, RayCastResult, Region,
 };
+use glam::IVec2;
 use num_traits::{NumCast, Unsigned};
+use std::fmt::Debug;
 
 /// A map of pixels implemented by an MX quad tree.
 /// The {T} type parameter is the type of the pixel data, by default a bool, to denote the pixel is on or off.
