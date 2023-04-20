@@ -1,6 +1,5 @@
 mod direction;
 mod icircle;
-mod ipolygon;
 mod irect;
 mod line;
 mod line_interval;
@@ -12,6 +11,6 @@ mod ray_cast;
 mod region;
 
 pub use self::{
-    direction::*, icircle::*, ipolygon::*, irect::*, line::*, line_interval::*, pixel_map::*,
-    pnode::*, quadrant::*, ray_cast::*, region::*,
+    direction::*, icircle::*, irect::*, line::*, line_interval::*, pixel_map::*, pnode::*,
+    quadrant::*, ray_cast::*, region::*,
 };

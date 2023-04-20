@@ -8,7 +8,7 @@ use std::fmt::Debug;
 
 pub type Children<T, U> = [Box<PNode<T, U>>; 4];
 
-/// A node of a {PixelMap} quad tree.
+/// A node of a [PixelMap] quad tree.
 #[derive(Clone, Debug, PartialEq)]
 pub struct PNode<T: Copy + PartialEq = bool, U: Unsigned + NumCast + Copy + Debug = u16> {
     region: Region<U>,
@@ -89,6 +89,7 @@ impl<T: Copy + PartialEq, U: Unsigned + NumCast + Copy + Debug> PNode<T, U> {
         self.children.as_ref()
     }
 
+    /// Get the child node in the given quadrant. If this node has no children, `None` is returned.
     #[inline]
     pub fn child(&self, quadrant: Quadrant) -> Option<&PNode<T, U>> {
         match &self.children {
@@ -97,6 +98,8 @@ impl<T: Copy + PartialEq, U: Unsigned + NumCast + Copy + Debug> PNode<T, U> {
         }
     }
 
+    /// Get a mutable reference to the child node in the given quadrant. If this node has no children,
+    /// `None` is returned.
     #[inline]
     pub fn child_mut(&mut self, quadrant: Quadrant) -> Option<&mut PNode<T, U>> {
         match &mut self.children {
@@ -105,8 +108,8 @@ impl<T: Copy + PartialEq, U: Unsigned + NumCast + Copy + Debug> PNode<T, U> {
         }
     }
 
-    /// Take the children of this node, making it a leaf node, having a value of whatever
-    /// was in effect at the time it was subdivided into child nodes. This marks the node as dirty.
+    // Take the children of this node, making it a leaf node, having a value of whatever
+    // was in effect at the time it was subdivided into child nodes. This marks the node as dirty.
     #[inline]
     pub(super) fn take_children(&mut self) -> Option<Children<T, U>> {
         self.dirty = true;
@@ -129,7 +132,7 @@ impl<T: Copy + PartialEq, U: Unsigned + NumCast + Copy + Debug> PNode<T, U> {
         }
     }
 
-    /// Visit all nodes.
+    // Visit all nodes.
     pub(super) fn visit_nodes<F>(&self, visitor: &mut F)
     where
         F: FnMut(&PNode<T, U>),
@@ -142,7 +145,7 @@ impl<T: Copy + PartialEq, U: Unsigned + NumCast + Copy + Debug> PNode<T, U> {
         }
     }
 
-    /// Visit all nodes, mutably.
+    // Visit all nodes, mutably.
     pub(super) fn visit_nodes_mut<F>(&mut self, visitor: &mut F)
     where
         F: FnMut(&mut PNode<T, U>),
@@ -155,7 +158,7 @@ impl<T: Copy + PartialEq, U: Unsigned + NumCast + Copy + Debug> PNode<T, U> {
         }
     }
 
-    /// Visit all leaf nodes.
+    // Visit all leaf nodes.
     pub(super) fn visit_leaves<F>(&self, visitor: &mut F)
     where
         F: FnMut(&PNode<T, U>),
@@ -170,7 +173,7 @@ impl<T: Copy + PartialEq, U: Unsigned + NumCast + Copy + Debug> PNode<T, U> {
         }
     }
 
-    /// Visit all leaf nodes within a given rectangle boundary.
+    // Visit all leaf nodes within a given rectangle boundary.
     pub(super) fn visit_leaves_in_rect<F>(
         &self,
         rect: &IRect,

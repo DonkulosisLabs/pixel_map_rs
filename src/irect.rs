@@ -32,11 +32,15 @@ impl IRect {
         max: IVec2::NEG_ONE,
     };
 
+    /// Create a new [Self] with the given minimum and maximum points.
     #[inline]
     pub fn new(x0: i32, y0: i32, x1: i32, y1: i32) -> Self {
         Self::from_corners((x0, y0), (x1, y1))
     }
 
+    /// Create a new [Self] with the given minimum and maximum points.
+    /// Points are normalized such that the minimum becomes the bottom left corner,
+    /// and the maximum becomes the top right corner.
     #[inline]
     pub fn from_corners<P>(min: P, max: P) -> Self
     where
@@ -50,7 +54,7 @@ impl IRect {
         }
     }
 
-    /// Create a new {Self} with the given center point, and width and height.
+    /// Create a new [Self] with the given center point, and width and height.
     #[inline]
     pub fn centered_at<P>(point: P, width: u32, height: u32) -> Self
     where
@@ -72,77 +76,93 @@ impl IRect {
         Self::from_corners(min, max)
     }
 
+    /// Determine if this rectangle min point is equal to the max point.
     #[inline]
     pub fn is_zero(&self) -> bool {
         self.min.x == self.max.x && self.min.y == self.max.y
     }
 
+    /// Determine if this rectangle's area is empty.
     #[inline]
     pub fn is_empty(&self) -> bool {
         self.min.x == self.max.x || self.min.y == self.max.y
     }
 
+    /// Get the minimum point `x` component.
     #[inline]
     pub fn x(&self) -> i32 {
         self.min.x
     }
 
+    /// Get the minimum point `y` component.
     #[inline]
     pub fn y(&self) -> i32 {
         self.min.y
     }
 
+    /// Get the minimum point.
     #[inline]
     pub fn min(&self) -> IVec2 {
         self.min
     }
 
+    /// Get the maximum point.
     #[inline]
     pub fn max(&self) -> IVec2 {
         self.max
     }
 
+    /// Get the center point of this rectangle.
     #[inline]
     pub fn center(&self) -> IVec2 {
         let half_max = self.max / 2;
         self.min + half_max
     }
 
+    /// Get the width of this rectangle.
     #[inline]
     pub fn width(&self) -> u32 {
         (self.max.x - self.min.x) as u32
     }
 
+    /// Get the height of this rectangle.
     #[inline]
     pub fn height(&self) -> u32 {
         (self.max.y - self.min.y) as u32
     }
 
+    /// Get the dimensions of this rectangle.
     #[inline]
     pub fn size(&self) -> IVec2 {
         self.max - self.min
     }
 
+    /// Get the left bounds of this rectangle, inclusive.
     #[inline]
     pub fn left_bounds(&self) -> i32 {
         self.min.x
     }
 
+    /// Get the right bounds of this rectangle, exclusive.
     #[inline]
     pub fn right_bounds(&self) -> i32 {
         self.max.x - 1
     }
 
+    /// Get the top bounds of this rectangle, exclusive.
     #[inline]
     pub fn top_bounds(&self) -> i32 {
         self.max.y - 1
     }
 
+    /// Get the bottom bounds of this rectangle, inclusive.
     #[inline]
     pub fn bottom_bounds(&self) -> i32 {
         self.min.y
     }
 
+    /// Get a new rectangle with the same dimensions, but with the maximum point
+    /// increased by one in order to treat the top and right edges inclusively.
     #[inline]
     pub fn inclusive(&self) -> Self {
         Self {
@@ -151,6 +171,7 @@ impl IRect {
         }
     }
 
+    /// Get a new rectangle that is grown in all directions by the given amount.
     #[inline]
     pub fn grow(&self, amount: i32) -> Self {
         Self {
@@ -159,6 +180,7 @@ impl IRect {
         }
     }
 
+    /// Determine if this rectangle contains the given point.
     #[inline]
     pub fn contains<P>(&self, point: P) -> bool
     where
@@ -171,6 +193,7 @@ impl IRect {
             && point.y >= self.bottom_bounds()
     }
 
+    /// Get the minimum distance squared from the closest edge of this rectangle to the given point.
     #[inline]
     pub fn distance_squared_to<P>(&self, point: P) -> f32
     where
@@ -200,6 +223,7 @@ impl IRect {
         (dx * dx + dy * dy) as f32
     }
 
+    /// Get the minimum distance from the closest edge of this rectangle to the given point.
     #[inline]
     pub fn distance_to<P>(&self, point: P) -> f32
     where
@@ -208,11 +232,13 @@ impl IRect {
         self.distance_squared_to(point).sqrt()
     }
 
+    /// Determine if this rectangle contains the given rectangle.
     #[inline]
     pub fn contains_rect(&self, rect: &Self) -> bool {
         self.contains(rect.min()) && self.contains(rect.max)
     }
 
+    /// Determine if this rectangle intersects the given rectangle.
     #[inline]
     pub fn intersects_rect(&self, other: &Self) -> bool {
         if self.right_bounds() < other.left_bounds() || self.left_bounds() > other.right_bounds() {
@@ -224,6 +250,7 @@ impl IRect {
         true
     }
 
+    /// Create a new rectangle that encompasses both this rectangle and the given rectangle.
     #[inline]
     pub fn union(&self, other: &Self) -> Self {
         Self {
@@ -232,6 +259,7 @@ impl IRect {
         }
     }
 
+    /// Create a new rectangle that encompasses both this rectangle and the given point.
     #[inline]
     pub fn union_point(&self, other: IVec2) -> Self {
         Self {
@@ -240,6 +268,7 @@ impl IRect {
         }
     }
 
+    /// Create a new rectangle that is the intersection of this rectangle and the given rectangle.
     #[inline]
     pub fn intersection(&self, other: &Self) -> Option<Self> {
         let mut r = IRect {
@@ -254,6 +283,7 @@ impl IRect {
         }
     }
 
+    /// Get the four lines that make up the edges of this rectangle.
     #[inline]
     pub fn segments(&self) -> [Line; 4] {
         let width = self.max.x - self.min.x;

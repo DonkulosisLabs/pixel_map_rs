@@ -1,5 +1,6 @@
 use glam::IVec2;
 
+/// A quadrant in a box.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Quadrant {
     BottomLeft = 0,
@@ -9,6 +10,7 @@ pub enum Quadrant {
 }
 
 impl Quadrant {
+    /// Returns the quadrant for the given point in relation to the given center point.
     #[inline]
     pub fn for_point<P>(point: P, center: i32) -> Quadrant
     where

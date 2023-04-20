@@ -9,6 +9,7 @@ pub struct ICircle {
 }
 
 impl ICircle {
+    /// Creates a new circle with the given center point and radius.
     #[inline]
     pub fn new<P>(point: P, radius: u32) -> Self
     where
@@ -20,26 +21,31 @@ impl ICircle {
         }
     }
 
+    /// Get the center point `x` component.
     #[inline]
     pub fn x(&self) -> i32 {
         self.point.x
     }
 
+    /// Get the center point `y` component.
     #[inline]
     pub fn y(&self) -> i32 {
         self.point.y
     }
 
+    /// Get the center point.
     #[inline]
     pub fn point(&self) -> IVec2 {
         self.point
     }
 
+    /// Get the radius.
     #[inline]
     pub fn radius(&self) -> u32 {
         self.radius
     }
 
+    /// Determine if the circle contains the given point.
     #[inline]
     pub fn contains<P>(&self, point: P) -> bool
     where
@@ -49,6 +55,7 @@ impl ICircle {
         d.x * d.x + d.y * d.y <= self.radius as i32 * self.radius as i32
     }
 
+    /// Get the axis-aligned bounding box of the circle.
     #[inline]
     pub fn aabb(&self) -> IRect {
         let size = self.radius * 2;

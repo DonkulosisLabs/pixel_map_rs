@@ -12,6 +12,7 @@ pub const SOUTH_EAST: IVec2 = IVec2 { x: 1, y: -1 };
 pub const SOUTH_WEST: IVec2 = IVec2 { x: -1, y: -1 };
 pub const WEST: IVec2 = IVec2 { x: -1, y: 0 };
 
+/// A direction in the 2D plane.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Direction {
     North,
@@ -25,6 +26,7 @@ pub enum Direction {
 }
 
 impl Direction {
+    /// Returns the unit vector for this direction.
     pub fn unit(&self) -> IVec2 {
         match self {
             Direction::North => NORTH,
@@ -38,7 +40,27 @@ impl Direction {
         }
     }
 
+    /// Move a point in this direction by the given amount.
     pub fn move_point(&self, point: IVec2, by: i32) -> IVec2 {
         point + self.unit() * by
+    }
+
+    /// Returns true if this direction is cardinal (N, E, S, W).
+    pub fn is_cardinal(&self) -> bool {
+        matches!(
+            self,
+            Direction::North | Direction::East | Direction::South | Direction::West
+        )
+    }
+
+    /// Returns true if this direction is diagonal (NE, NW, SE, SW).
+    pub fn is_diagonal(&self) -> bool {
+        matches!(
+            self,
+            Direction::NorthEast
+                | Direction::NorthWest
+                | Direction::SouthEast
+                | Direction::SouthWest
+        )
     }
 }
