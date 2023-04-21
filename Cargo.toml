@@ -6,10 +6,20 @@ authors = ["Troy Kinsella"]
 homepage = "https://github.com/DonkulosisLabs/pixel_map_rs"
 repository = "https://github.com/DonkulosisLabs/pixel_map_rs"
 readme = "README.md"
-license = "MIT"
 license-file = "LICENSE"
 edition = "2021"
 
 [dependencies]
 glam = "^0.23.0"
 num-traits = "^0.2.15"
+
+[dev-dependencies]
+criterion = "0.4"
+
+[[bench]]
+name = "set_pixel"
+harness = false
+
+[[bench]]
+name = "get_pixel"
+harness = false

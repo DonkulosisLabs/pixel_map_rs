@@ -27,7 +27,5 @@ A `pixel_map` stores pixel data for a square image in a quad tree structure.
   of your use case.
 * In order to simplify and optimise pixel map operations, the pixel map is always square, and the
   number of pixels in each dimension must be a power of two.
-* The efficiency of operations as well as memory usage efficiency degrades as the number of adjacent
-  pixels with differing values increases. So, this structure is best suited for manipulating image
-  data having a high degree of homogeneity.
+
 
