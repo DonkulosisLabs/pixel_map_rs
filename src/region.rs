@@ -2,6 +2,7 @@ use super::quadrant::Quadrant;
 use glam::IVec2;
 use num_traits::{NumCast, Unsigned};
 
+/// A square region defined by a bottom-left point and a size, in integer units.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct Region<U: Unsigned + Copy = u16> {
     x: U,
@@ -10,21 +11,25 @@ pub struct Region<U: Unsigned + Copy = u16> {
 }
 
 impl<U: Unsigned + NumCast + Copy> Region<U> {
+    /// Create a new region with the given bottom-left point coordinates and size.
     #[inline]
     pub fn new(x: U, y: U, size: U) -> Self {
         Self { x, y, size }
     }
 
+    /// Get the `x` component of the bottom-left point.
     #[inline]
     pub fn x(&self) -> U {
         self.x
     }
 
+    /// Get the `y` component of the bottom-left point.
     #[inline]
     pub fn y(&self) -> U {
         self.y
     }
 
+    /// Get the bottom-left point.
     #[inline]
     pub fn point(&self) -> IVec2 {
         let x = num_traits::cast::cast(self.x).unwrap();
@@ -32,27 +37,32 @@ impl<U: Unsigned + NumCast + Copy> Region<U> {
         (x, y).into()
     }
 
+    /// Get the top-right point.
     #[inline]
     pub fn end_point(&self) -> IVec2 {
         let size: i32 = num_traits::cast::cast(self.size).unwrap();
         self.point() + size - 1
     }
 
+    /// Get the size of the region.
     #[inline]
     pub fn size(&self) -> U {
         self.size
     }
 
+    /// Get the center point of the region.
     #[inline]
     pub fn center(&self) -> U {
         self.size / num_traits::cast::cast(2).unwrap()
     }
 
+    /// Determine if this region represents the smallest possible unit or pixel size.
     #[inline]
     pub fn is_unit(&self, pixel_size: u8) -> bool {
         self.size == num_traits::cast(pixel_size).unwrap()
     }
 
+    /// Determine if the given point is contained within this region.
     #[inline]
     pub fn contains<P>(&self, point: P) -> bool
     where
@@ -65,6 +75,7 @@ impl<U: Unsigned + NumCast + Copy> Region<U> {
         point.x >= x && point.x < x + size && point.y >= y && point.y < y + size
     }
 
+    /// Obtain the quadrant for the given point in relation to the center of this region.
     #[inline]
     pub fn quadrant_for<P>(&self, point: P) -> Quadrant
     where

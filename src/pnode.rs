@@ -8,7 +8,7 @@ use std::fmt::Debug;
 
 pub type Children<T, U> = [Box<PNode<T, U>>; 4];
 
-/// A node of a [PixelMap] quad tree.
+/// A node of a [crate::PixelMap] quad tree.
 #[derive(Clone, Debug, PartialEq)]
 pub struct PNode<T: Copy + PartialEq = bool, U: Unsigned + NumCast + Copy + Debug = u16> {
     region: Region<U>,
@@ -29,7 +29,7 @@ impl<T: Copy + PartialEq, U: Unsigned + NumCast + Copy + Debug> PNode<T, U> {
     }
 
     #[inline]
-    pub(super) fn with_children(value: T, children: Children<T, U>, dirty: bool) -> Self {
+    pub(super) fn with_children(children: Children<T, U>, dirty: bool) -> Self {
         let mut rect: IRect = children[0].region().into();
         for child in &children[1..] {
             rect = rect.union(&child.region().into());
@@ -43,7 +43,7 @@ impl<T: Copy + PartialEq, U: Unsigned + NumCast + Copy + Debug> PNode<T, U> {
 
         Self {
             region,
-            value,
+            value: children[0].value(),
             children: Some(children),
             dirty,
         }
