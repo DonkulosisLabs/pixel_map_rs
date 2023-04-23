@@ -23,3 +23,8 @@ harness = false
 [[bench]]
 name = "get_pixel"
 harness = false
+
+[[bench]]
+name = "visit"
+harness = false
+

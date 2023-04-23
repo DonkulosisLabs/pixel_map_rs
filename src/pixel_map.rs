@@ -558,6 +558,15 @@ mod test {
     use crate::*;
 
     #[test]
+    fn test_u_type_parameters() {
+        PixelMap::new(Region::new(0u8, 0, 2), false, 1);
+        PixelMap::new(Region::new(0u16, 0, 2), false, 1);
+        PixelMap::new(Region::new(0u32, 0, 2), false, 1);
+        PixelMap::new(Region::new(0u64, 0, 2), false, 1);
+        PixelMap::new(Region::new(0u128, 0, 2), false, 1);
+    }
+
+    #[test]
     fn test_clear() {
         let mut pm = PixelMap::new(Region::new(0u32, 0u32, 2u32), 0, 1);
         pm.set_pixel((1, 1), 1);
