@@ -1,4 +1,4 @@
-use super::Line;
+use super::ILine;
 use glam::IVec2;
 
 // Adapted from: https://github.com/ucarion/line_intersection
@@ -29,13 +29,13 @@ SOFTWARE.
 
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct LineInterval {
-    line: Line,
+    line: ILine,
     interval_of_intersection: (f32, f32),
 }
 
 impl LineInterval {
     #[inline]
-    pub fn line_segment(line: Line) -> LineInterval {
+    pub fn line_segment(line: ILine) -> LineInterval {
         LineInterval {
             line,
             interval_of_intersection: (0.0, 1.0),
@@ -43,7 +43,7 @@ impl LineInterval {
     }
 
     #[inline]
-    pub fn ray(line: Line) -> LineInterval {
+    pub fn ray(line: ILine) -> LineInterval {
         LineInterval {
             line,
             interval_of_intersection: (0.0, f32::INFINITY),
@@ -51,7 +51,7 @@ impl LineInterval {
     }
 
     #[inline]
-    pub fn line(line: Line) -> LineInterval {
+    pub fn line(line: ILine) -> LineInterval {
         LineInterval {
             line,
             interval_of_intersection: (f32::NEG_INFINITY, f32::INFINITY),
@@ -148,8 +148,8 @@ mod tests {
 
     #[test]
     fn divergent_intersecting_segments() {
-        let a = Line::new((100, 0), (100, 100));
-        let b = Line::new((0, 0), (200, 50));
+        let a = ILine::new((100, 0), (100, 100));
+        let b = ILine::new((0, 0), (200, 50));
         let s1 = LineInterval::line_segment(a);
         let s2 = LineInterval::line_segment(b);
         let relation = LineRelation::DivergentIntersecting((100, 25).into());
@@ -160,8 +160,8 @@ mod tests {
 
     #[test]
     fn divergent_intersecting_segment_and_ray() {
-        let a = Line::new((0, 0), (100, 100));
-        let b = Line::new((200, 0), (200, 300));
+        let a = ILine::new((0, 0), (100, 100));
+        let b = ILine::new((200, 0), (200, 300));
         let s1 = LineInterval::ray(a);
         let s2 = LineInterval::line_segment(b);
         let relation = LineRelation::DivergentIntersecting((200, 200).into());
@@ -172,8 +172,8 @@ mod tests {
 
     #[test]
     fn divergent_disjoint_segments() {
-        let a = Line::new((0, 0), (100, 100));
-        let b = Line::new((300, 0), (0, 300));
+        let a = ILine::new((0, 0), (100, 100));
+        let b = ILine::new((300, 0), (0, 300));
         let s1 = LineInterval::line_segment(a);
         let s2 = LineInterval::line_segment(b);
         let relation = LineRelation::DivergentDisjoint;
@@ -184,8 +184,8 @@ mod tests {
 
     #[test]
     fn divergent_disjoint_ray_and_line() {
-        let a = Line::new((100, 100), (0, 0));
-        let b = Line::new((300, 0), (0, 300));
+        let a = ILine::new((100, 100), (0, 0));
+        let b = ILine::new((300, 0), (0, 300));
         let s1 = LineInterval::ray(a);
         let s2 = LineInterval::line(b);
         let relation = LineRelation::DivergentDisjoint;
@@ -196,8 +196,8 @@ mod tests {
 
     #[test]
     fn parallel_disjoint_segments() {
-        let a = Line::new((0, 0), (100, 100));
-        let b = Line::new((0, 100), (100, 200));
+        let a = ILine::new((0, 0), (100, 100));
+        let b = ILine::new((0, 100), (100, 200));
         let s1 = LineInterval::line(a);
         let s2 = LineInterval::line(b);
         let relation = LineRelation::Parallel;
@@ -208,8 +208,8 @@ mod tests {
 
     #[test]
     fn collinear_overlapping_segment_and_line() {
-        let a = Line::new((0, 0), (0, 150));
-        let b = Line::new((0, 400), (0, 500));
+        let a = ILine::new((0, 0), (0, 150));
+        let b = ILine::new((0, 400), (0, 500));
         let s1 = LineInterval::line(a);
         let s2 = LineInterval::ray(b);
         let relation = LineRelation::Collinear;

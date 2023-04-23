@@ -1,5 +1,5 @@
-use super::region::Region;
-use super::Line;
+use super::ILine;
+use crate::Region;
 use glam::IVec2;
 
 use num_traits::{NumCast, Unsigned};
@@ -285,14 +285,14 @@ impl IRect {
 
     /// Get the four lines that make up the edges of this rectangle.
     #[inline]
-    pub fn segments(&self) -> [Line; 4] {
+    pub fn segments(&self) -> [ILine; 4] {
         let width = self.max.x - self.min.x;
         let height = self.max.y - self.min.y;
         [
-            Line::new(self.min, self.min + IVec2::new(width, 0)),
-            Line::new(self.min + IVec2::new(width, 0), self.max),
-            Line::new(self.max, self.min + IVec2::new(0, height)),
-            Line::new(self.min + IVec2::new(0, height), self.min),
+            ILine::new(self.min, self.min + IVec2::new(width, 0)),
+            ILine::new(self.min + IVec2::new(width, 0), self.max),
+            ILine::new(self.max, self.min + IVec2::new(0, height)),
+            ILine::new(self.min + IVec2::new(0, height), self.min),
         ]
     }
 
@@ -336,6 +336,11 @@ impl IRect {
             [index + 3, index],
         ]);
     }
+
+    #[inline]
+    pub fn pixels(&self) -> RectPixelIterator {
+        RectPixelIterator::new(self.clone())
+    }
 }
 
 impl ops::Add<IVec2> for IRect {
@@ -373,29 +378,17 @@ impl<U: Unsigned + NumCast + Copy> From<&Region<U>> for IRect {
     }
 }
 
-impl From<Line> for IRect {
+impl From<ILine> for IRect {
     #[inline]
-    fn from(line: Line) -> Self {
+    fn from(line: ILine) -> Self {
         IRect::from(&line)
     }
 }
 
-impl From<&Line> for IRect {
+impl From<&ILine> for IRect {
     #[inline]
-    fn from(line: &Line) -> Self {
+    fn from(line: &ILine) -> Self {
         line.aabb()
-    }
-}
-
-impl IntoIterator for IRect {
-    type Item = (i32, i32);
-    type IntoIter = RectPixelIterator;
-
-    #[inline]
-    fn into_iter(self) -> Self::IntoIter {
-        let x = self.x();
-        let y = self.y();
-        RectPixelIterator { rect: self, x, y }
     }
 }
 
@@ -405,15 +398,24 @@ pub struct RectPixelIterator {
     y: i32,
 }
 
+impl RectPixelIterator {
+    #[inline]
+    pub fn new(rect: IRect) -> Self {
+        let x = rect.x();
+        let y = rect.y();
+        Self { rect, x, y }
+    }
+}
+
 impl Iterator for RectPixelIterator {
-    type Item = (i32, i32);
+    type Item = IVec2;
 
     #[inline]
     fn next(&mut self) -> Option<Self::Item> {
         if self.x < self.rect.max.x {
             let x = self.x;
             self.x += 1;
-            Some((x, self.y))
+            Some(IVec2::new(x, self.y))
         } else if self.y < self.rect.max.y - 1 {
             self.x = self.rect.min.x;
             self.y += 1;
@@ -491,13 +493,13 @@ mod test {
     }
 
     #[test]
-    fn test_into_iter() {
+    fn test_pixels() {
         let rect = IRect::new(1, 1, 3, 3);
-        let mut iter = rect.into_iter();
-        assert_eq!(iter.next(), Some((1, 1)));
-        assert_eq!(iter.next(), Some((2, 1)));
-        assert_eq!(iter.next(), Some((1, 2)));
-        assert_eq!(iter.next(), Some((2, 2)));
+        let mut iter = rect.pixels();
+        assert_eq!(iter.next(), Some((1, 1).into()));
+        assert_eq!(iter.next(), Some((2, 1).into()));
+        assert_eq!(iter.next(), Some((1, 2).into()));
+        assert_eq!(iter.next(), Some((2, 2).into()));
         assert_eq!(iter.next(), None);
     }
 

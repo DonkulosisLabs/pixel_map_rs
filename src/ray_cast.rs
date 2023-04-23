@@ -1,14 +1,14 @@
-use super::line_iterator::LineIterator;
-use super::Line;
+use super::ILine;
+use super::LinePixelIterator;
 use glam::IVec2;
 
 #[derive(Debug, Default, Clone, Copy, Eq, PartialEq)]
 pub struct RayCastQuery {
-    pub line: Line,
+    pub line: ILine,
 }
 
 impl RayCastQuery {
-    pub fn new(line: Line) -> Self {
+    pub fn new(line: ILine) -> Self {
         Self { line }
     }
 }
@@ -28,7 +28,7 @@ impl RayCastResult {
 
 #[derive(Debug, Clone, PartialEq)]
 pub(super) struct RayCastContext {
-    pub(super) line_iter: LineIterator,
+    pub(super) line_iter: LinePixelIterator,
     pub(super) traversed: u32,
 }
 

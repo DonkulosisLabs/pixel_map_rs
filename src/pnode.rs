@@ -384,14 +384,14 @@ impl<T: Copy + PartialEq, U: Unsigned + NumCast + Copy + Debug> PNode<T, U> {
             self.set_value(value);
         } else if let Some(outer_aabb) = outer_rect.intersection(&self.region().into()) {
             self.draw_rect(&inner_rect, pixel_size, value);
-            for (x, y) in circle.clone().into_iter() {
-                if !outer_aabb.contains((x, y)) {
+            for p in circle.pixels() {
+                if !outer_aabb.contains(p) {
                     continue;
                 }
-                if inner_rect.contains((x, y)) {
+                if inner_rect.contains(p) {
                     continue;
                 }
-                self.set_pixel((x, y).into(), pixel_size, value);
+                self.set_pixel(p, pixel_size, value);
             }
         }
     }

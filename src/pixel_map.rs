@@ -1,7 +1,7 @@
 use super::{
     Children, ICircle, IRect, PNode, RayCast, RayCastContext, RayCastQuery, RayCastResult, Region,
 };
-use crate::Quadrant;
+use crate::{ILine, Quadrant, Shape};
 use glam::IVec2;
 use num_traits::{NumCast, Unsigned};
 use std::fmt::{Debug, Formatter};
@@ -101,6 +101,28 @@ impl<T: Copy + PartialEq, U: Unsigned + NumCast + Copy + Debug> PixelMap<T, U> {
         let point = point.into();
         if self.root.region().contains(point) {
             self.root.set_pixel(point, self.pixel_size, value);
+            true
+        } else {
+            false
+        }
+    }
+
+    #[inline]
+    pub fn draw(&mut self, shape: &Shape, value: T) -> bool {
+        match shape {
+            Shape::Point { point } => self.set_pixel(*point, value),
+            Shape::Line { line } => self.draw_line(line, value),
+            Shape::Rectangle { rect } => self.draw_rect(rect, value),
+            Shape::Circle { circle } => self.draw_circle(circle, value),
+        }
+    }
+
+    #[inline]
+    pub fn draw_line(&mut self, line: &ILine, value: T) -> bool {
+        if line.intersects_rect(&self.root.region().into()) {
+            for p in line.pixels() {
+                self.set_pixel(p, value);
+            }
             true
         } else {
             false
@@ -349,7 +371,7 @@ impl<T: Copy + PartialEq, U: Unsigned + NumCast + Copy + Debug> PixelMap<T, U> {
         F: FnMut(&PNode<T, U>) -> RayCast,
     {
         let mut ctx = RayCastContext {
-            line_iter: query.line.iter(),
+            line_iter: query.line.pixels(),
             traversed: 0,
         };
         if let Some(result) = self.root.ray_cast(&query, &mut ctx, &mut collision_check) {

@@ -68,6 +68,12 @@ impl ICircle {
         let size = (self.radius as f32 * 2f32.sqrt()) as u32;
         IRect::centered_at(self.point, size, size)
     }
+
+    /// Iterator over pixels in the circle.
+    #[inline]
+    pub fn pixels(&self) -> CirclePixelIterator {
+        CirclePixelIterator::new(self.clone())
+    }
 }
 
 impl From<IRect> for ICircle {
@@ -88,16 +94,6 @@ impl From<&IRect> for ICircle {
     }
 }
 
-impl IntoIterator for ICircle {
-    type Item = (i32, i32);
-    type IntoIter = CirclePixelIterator;
-
-    #[inline]
-    fn into_iter(self) -> Self::IntoIter {
-        CirclePixelIterator::new(self)
-    }
-}
-
 pub struct CirclePixelIterator {
     circle: ICircle,
     x: i32,
@@ -115,7 +111,7 @@ impl CirclePixelIterator {
 }
 
 impl Iterator for CirclePixelIterator {
-    type Item = (i32, i32);
+    type Item = IVec2;
 
     fn next(&mut self) -> Option<Self::Item> {
         let r = self.circle.radius as i32;
@@ -135,7 +131,7 @@ impl Iterator for CirclePixelIterator {
         } else {
             let x = self.circle.x() + x;
             let y = self.circle.y() + self.y;
-            Some((x, y))
+            Some(IVec2::new(x, y))
         }
     }
 }
@@ -154,21 +150,21 @@ mod test {
     }
 
     #[test]
-    fn test_circle_iterator() {
-        let mut iter = ICircle::new((0, 0), 2).into_iter();
-        assert_eq!(iter.next(), Some((0, -2)));
-        assert_eq!(iter.next(), Some((-1, -1)));
-        assert_eq!(iter.next(), Some((0, -1)));
-        assert_eq!(iter.next(), Some((1, -1)));
-        assert_eq!(iter.next(), Some((-2, 0)));
-        assert_eq!(iter.next(), Some((-1, 0)));
-        assert_eq!(iter.next(), Some((0, 0)));
-        assert_eq!(iter.next(), Some((1, 0)));
-        assert_eq!(iter.next(), Some((2, 0)));
-        assert_eq!(iter.next(), Some((-1, 1)));
-        assert_eq!(iter.next(), Some((0, 1)));
-        assert_eq!(iter.next(), Some((1, 1)));
-        assert_eq!(iter.next(), Some((0, 2)));
+    fn test_pixels() {
+        let mut iter = ICircle::new((0, 0), 2).pixels();
+        assert_eq!(iter.next(), Some((0, -2).into()));
+        assert_eq!(iter.next(), Some((-1, -1).into()));
+        assert_eq!(iter.next(), Some((0, -1).into()));
+        assert_eq!(iter.next(), Some((1, -1).into()));
+        assert_eq!(iter.next(), Some((-2, 0).into()));
+        assert_eq!(iter.next(), Some((-1, 0).into()));
+        assert_eq!(iter.next(), Some((0, 0).into()));
+        assert_eq!(iter.next(), Some((1, 0).into()));
+        assert_eq!(iter.next(), Some((2, 0).into()));
+        assert_eq!(iter.next(), Some((-1, 1).into()));
+        assert_eq!(iter.next(), Some((0, 1).into()));
+        assert_eq!(iter.next(), Some((1, 1).into()));
+        assert_eq!(iter.next(), Some((0, 2).into()));
         assert_eq!(iter.next(), None);
         assert_eq!(iter.next(), None);
     }

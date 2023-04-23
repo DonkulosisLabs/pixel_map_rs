@@ -1,7 +1,8 @@
-use super::{Direction, IRect, Line};
+use super::{ILine, IRect};
+use crate::Direction;
 use glam::IVec2;
 
-pub(super) fn plot_line<F>(x0: i32, y0: i32, x1: i32, y1: i32, mut plot: F)
+pub fn plot_line<F>(x0: i32, y0: i32, x1: i32, y1: i32, mut plot: F)
 where
     F: FnMut(i32, i32),
 {
@@ -40,25 +41,25 @@ where
 }
 
 #[derive(Debug, Clone, PartialEq)]
-pub enum LineIterator {
+pub enum LinePixelIterator {
     Axis(AxisLineIterator),
     Angle(AngleLineIterator),
 }
 
-impl LineIterator {
+impl LinePixelIterator {
     #[inline]
-    pub(super) fn new(line: &Line) -> Self {
+    pub fn new(line: &ILine) -> Self {
         match AxisLineIterator::new(line) {
-            Some(iter) => LineIterator::Axis(iter),
-            None => LineIterator::Angle(AngleLineIterator::new(line)),
+            Some(iter) => LinePixelIterator::Axis(iter),
+            None => LinePixelIterator::Angle(AngleLineIterator::new(line)),
         }
     }
 
     #[inline]
     pub fn peek(&self) -> Option<IVec2> {
         match self {
-            LineIterator::Axis(iter) => iter.peek(),
-            LineIterator::Angle(iter) => iter.peek(),
+            LinePixelIterator::Axis(iter) => iter.peek(),
+            LinePixelIterator::Angle(iter) => iter.peek(),
         }
     }
 
@@ -69,20 +70,20 @@ impl LineIterator {
     #[inline]
     pub fn seek_bounds(&mut self, bounds: &IRect) -> Option<IVec2> {
         match self {
-            LineIterator::Axis(iter) => iter.seek_bounds(bounds),
-            LineIterator::Angle(iter) => iter.seek_bounds(bounds),
+            LinePixelIterator::Axis(iter) => iter.seek_bounds(bounds),
+            LinePixelIterator::Angle(iter) => iter.seek_bounds(bounds),
         }
     }
 }
 
-impl Iterator for LineIterator {
+impl Iterator for LinePixelIterator {
     type Item = IVec2;
 
     #[inline]
     fn next(&mut self) -> Option<Self::Item> {
         match self {
-            LineIterator::Axis(iter) => iter.next(),
-            LineIterator::Angle(iter) => iter.next(),
+            LinePixelIterator::Axis(iter) => iter.next(),
+            LinePixelIterator::Angle(iter) => iter.next(),
         }
     }
 }
@@ -97,7 +98,7 @@ pub struct AxisLineIterator {
 
 impl AxisLineIterator {
     #[inline]
-    pub(super) fn new(line: &Line) -> Option<Self> {
+    pub fn new(line: &ILine) -> Option<Self> {
         let direction = line.axis_alignment().or(line.diagonal_axis_alignment())?;
         Some(Self {
             point: line.start(),
@@ -232,7 +233,7 @@ pub struct AngleLineIterator {
 
 impl AngleLineIterator {
     #[inline]
-    pub(super) fn new(line: &Line) -> Self {
+    pub fn new(line: &ILine) -> Self {
         let x0 = line.start().x;
         let y0 = line.start().y;
         let x1 = line.end().x;
@@ -453,49 +454,49 @@ mod test {
     fn test_iterate_line() {
         #[derive(Debug)]
         struct TestCase {
-            line: Line,
+            line: ILine,
             unit: IVec2,
         }
 
         let test_cases = vec![
             TestCase {
-                line: Line::new((0, 0), (0, 10)), // N
+                line: ILine::new((0, 0), (0, 10)), // N
                 unit: (0, 1).into(),
             },
             TestCase {
-                line: Line::new((0, 0), (10, 10)), // NE
+                line: ILine::new((0, 0), (10, 10)), // NE
                 unit: (1, 1).into(),
             },
             TestCase {
-                line: Line::new((0, 0), (10, 0)), // E
+                line: ILine::new((0, 0), (10, 0)), // E
                 unit: (1, 0).into(),
             },
             TestCase {
-                line: Line::new((0, 0), (10, -10)), // SE
+                line: ILine::new((0, 0), (10, -10)), // SE
                 unit: (1, -1).into(),
             },
             TestCase {
-                line: Line::new((0, 0), (0, -10)), // S
+                line: ILine::new((0, 0), (0, -10)), // S
                 unit: (0, -1).into(),
             },
             TestCase {
-                line: Line::new((0, 0), (-10, -10)), // SW
+                line: ILine::new((0, 0), (-10, -10)), // SW
                 unit: (-1, -1).into(),
             },
             TestCase {
-                line: Line::new((0, 0), (-10, 0)), // W
+                line: ILine::new((0, 0), (-10, 0)), // W
                 unit: (-1, 0).into(),
             },
             TestCase {
-                line: Line::new((0, 0), (-10, 10)), // NW
+                line: ILine::new((0, 0), (-10, 10)), // NW
                 unit: (-1, 1).into(),
             },
         ];
 
         for test_case in test_cases {
             let iters = &mut [
-                LineIterator::Axis(AxisLineIterator::new(&test_case.line).unwrap()),
-                LineIterator::Angle(AngleLineIterator::new(&test_case.line)),
+                LinePixelIterator::Axis(AxisLineIterator::new(&test_case.line).unwrap()),
+                LinePixelIterator::Angle(AngleLineIterator::new(&test_case.line)),
             ];
 
             for iter in iters {
@@ -519,7 +520,7 @@ mod test {
     fn test_seek_bounds() {
         #[derive(Debug)]
         struct TestCase {
-            line: Line,
+            line: ILine,
             seek_bounds_ops: Vec<SeekBoundsOp>,
         }
 
@@ -532,7 +533,7 @@ mod test {
 
         let test_cases = vec![
             TestCase {
-                line: Line::new((0, 0), (0, 10)), // N
+                line: ILine::new((0, 0), (0, 10)), // N
                 seek_bounds_ops: vec![
                     SeekBoundsOp {
                         bounds: IRect::new(0, 0, 2, 2),
@@ -552,7 +553,7 @@ mod test {
                 ],
             },
             TestCase {
-                line: Line::new((0, 0), (10, 10)), // NE
+                line: ILine::new((0, 0), (10, 10)), // NE
                 seek_bounds_ops: vec![
                     SeekBoundsOp {
                         bounds: IRect::new(0, 0, 2, 2),
@@ -572,7 +573,7 @@ mod test {
                 ],
             },
             TestCase {
-                line: Line::new((10, 0), (0, 10)), // NW
+                line: ILine::new((10, 0), (0, 10)), // NW
                 seek_bounds_ops: vec![
                     SeekBoundsOp {
                         bounds: IRect::new(8, 0, 10, 2),
@@ -592,7 +593,7 @@ mod test {
                 ],
             },
             TestCase {
-                line: Line::new((0, 0), (10, 0)), // E
+                line: ILine::new((0, 0), (10, 0)), // E
                 seek_bounds_ops: vec![
                     SeekBoundsOp {
                         bounds: IRect::new(0, 0, 2, 2),
@@ -612,7 +613,7 @@ mod test {
                 ],
             },
             TestCase {
-                line: Line::new((0, 0), (0, -10)), // S
+                line: ILine::new((0, 0), (0, -10)), // S
                 seek_bounds_ops: vec![
                     SeekBoundsOp {
                         bounds: IRect::new(0, -2, 2, 0),
@@ -632,7 +633,7 @@ mod test {
                 ],
             },
             TestCase {
-                line: Line::new((0, 0), (-10, 0)), // W
+                line: ILine::new((0, 0), (-10, 0)), // W
                 seek_bounds_ops: vec![
                     SeekBoundsOp {
                         bounds: IRect::new(-2, 0, 0, 2),
@@ -652,7 +653,7 @@ mod test {
                 ],
             },
             TestCase {
-                line: Line::new((0, 0), (-10, -10)), // SW
+                line: ILine::new((0, 0), (-10, -10)), // SW
                 seek_bounds_ops: vec![
                     SeekBoundsOp {
                         bounds: IRect::new(-2, -2, 0, 0),
@@ -672,7 +673,7 @@ mod test {
                 ],
             },
             TestCase {
-                line: Line::new((0, 0), (10, -10)), // SE
+                line: ILine::new((0, 0), (10, -10)), // SE
                 seek_bounds_ops: vec![
                     SeekBoundsOp {
                         bounds: IRect::new(0, -2, 2, 0),
@@ -695,8 +696,8 @@ mod test {
 
         for test_case in test_cases {
             let iters = &mut [
-                LineIterator::Axis(AxisLineIterator::new(&test_case.line).unwrap()),
-                LineIterator::Angle(AngleLineIterator::new(&test_case.line)),
+                LinePixelIterator::Axis(AxisLineIterator::new(&test_case.line).unwrap()),
+                LinePixelIterator::Angle(AngleLineIterator::new(&test_case.line)),
             ];
 
             for iter in iters {
@@ -736,7 +737,7 @@ mod test {
             (0, 0, 10, -10),
         ];
         for test_case in test_cases {
-            let line = Line::new(
+            let line = ILine::new(
                 IVec2::new(test_case.0, test_case.1),
                 IVec2::new(test_case.2, test_case.3),
             );

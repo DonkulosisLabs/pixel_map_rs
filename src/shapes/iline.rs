@@ -1,16 +1,17 @@
 use super::line_interval::LineInterval;
-use super::line_iterator::{plot_line, LineIterator};
-use super::{Direction, IRect};
+use super::line_iterator::{plot_line, LinePixelIterator};
+use super::IRect;
+use crate::Direction;
 use glam::IVec2;
 
 /// A line segment represented by two points, in integer coordinates.
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
-pub struct Line {
+pub struct ILine {
     start: IVec2,
     end: IVec2,
 }
 
-impl Line {
+impl ILine {
     /// Creates a new line with the given start and end points.
     #[inline]
     pub fn new<P>(start: P, end: P) -> Self
@@ -141,7 +142,7 @@ impl Line {
 
     /// Determine if this line intersects the given line.
     #[inline]
-    pub fn intersects_line(&self, other: &Line) -> Option<IVec2> {
+    pub fn intersects_line(&self, other: &ILine) -> Option<IVec2> {
         let seg1 = LineInterval::line_segment(*self);
         let seg2 = LineInterval::line_segment(*other);
         seg1.relate(&seg2).unique_intersection()
@@ -168,18 +169,8 @@ impl Line {
     }
 
     #[inline]
-    pub fn iter(&self) -> LineIterator {
-        LineIterator::new(self)
-    }
-}
-
-impl IntoIterator for Line {
-    type Item = IVec2;
-    type IntoIter = LineIterator;
-
-    #[inline]
-    fn into_iter(self) -> Self::IntoIter {
-        LineIterator::new(&self)
+    pub fn pixels(&self) -> LinePixelIterator {
+        LinePixelIterator::new(self)
     }
 }
 
@@ -201,7 +192,7 @@ mod test {
 
     #[test]
     fn test_contains() {
-        let line = Line::new((0, 0), (10, 10));
+        let line = ILine::new((0, 0), (10, 10));
         assert!(line.contains((5, 5)));
         assert!(!line.contains((5, 6)));
         assert!(!line.contains((6, 5)));
@@ -209,7 +200,7 @@ mod test {
 
     #[test]
     fn test_aabb() {
-        let line = Line::new((0, 0), (10, 10));
+        let line = ILine::new((0, 0), (10, 10));
         let aabb = line.aabb();
         assert_eq!(aabb.x(), 0);
         assert_eq!(aabb.y(), 0);
@@ -219,31 +210,31 @@ mod test {
 
     #[test]
     fn test_axis_alignment() {
-        let line = Line::new((0, 0), (10, 10));
+        let line = ILine::new((0, 0), (10, 10));
         assert_eq!(line.axis_alignment(), None);
-        let line = Line::new((0, 0), (10, 0));
+        let line = ILine::new((0, 0), (10, 0));
         assert_eq!(line.axis_alignment(), Some(Direction::East));
-        let line = Line::new((0, 0), (0, 10));
+        let line = ILine::new((0, 0), (0, 10));
         assert_eq!(line.axis_alignment(), Some(Direction::North));
-        let line = Line::new((10, 0), (0, 0));
+        let line = ILine::new((10, 0), (0, 0));
         assert_eq!(line.axis_alignment(), Some(Direction::West));
-        let line = Line::new((0, 10), (0, 0));
+        let line = ILine::new((0, 10), (0, 0));
         assert_eq!(line.axis_alignment(), Some(Direction::South));
-        let line = Line::new((0, 10), (1, 0));
+        let line = ILine::new((0, 10), (1, 0));
         assert_eq!(line.axis_alignment(), None);
     }
 
     #[test]
     fn test_diag_axis_alignment() {
-        let line = Line::new((0, 0), (9, 10));
+        let line = ILine::new((0, 0), (9, 10));
         assert_eq!(line.diagonal_axis_alignment(), None);
-        let line = Line::new((0, 0), (10, 10));
+        let line = ILine::new((0, 0), (10, 10));
         assert_eq!(line.diagonal_axis_alignment(), Some(Direction::NorthEast));
-        let line = Line::new((0, 10), (10, 0));
+        let line = ILine::new((0, 10), (10, 0));
         assert_eq!(line.diagonal_axis_alignment(), Some(Direction::SouthEast));
-        let line = Line::new((10, 0), (0, 10));
+        let line = ILine::new((10, 0), (0, 10));
         assert_eq!(line.diagonal_axis_alignment(), Some(Direction::NorthWest));
-        let line = Line::new((10, 10), (0, 0));
+        let line = ILine::new((10, 10), (0, 0));
         assert_eq!(line.diagonal_axis_alignment(), Some(Direction::SouthWest));
     }
 }
