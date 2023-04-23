@@ -32,13 +32,13 @@ impl IRect {
         max: IVec2::NEG_ONE,
     };
 
-    /// Create a new [Self] with the given minimum and maximum points.
+    /// Create a new [IRect] with the given minimum and maximum points.
     #[inline]
     pub fn new(x0: i32, y0: i32, x1: i32, y1: i32) -> Self {
         Self::from_corners((x0, y0), (x1, y1))
     }
 
-    /// Create a new [Self] with the given minimum and maximum points.
+    /// Create a new [IRect] with the given minimum and maximum points.
     /// Points are normalized such that the minimum becomes the bottom left corner,
     /// and the maximum becomes the top right corner.
     #[inline]
@@ -54,7 +54,7 @@ impl IRect {
         }
     }
 
-    /// Create a new [Self] with the given center point, and width and height.
+    /// Create a new [IRect] with the given center point, and width and height.
     #[inline]
     pub fn centered_at<P>(point: P, width: u32, height: u32) -> Self
     where
@@ -341,6 +341,7 @@ impl IRect {
 impl ops::Add<IVec2> for IRect {
     type Output = Self;
 
+    #[inline]
     fn add(self, rhs: IVec2) -> Self::Output {
         Self::from_corners(self.min + rhs, self.max + rhs)
     }
@@ -349,18 +350,21 @@ impl ops::Add<IVec2> for IRect {
 impl ops::Sub<IVec2> for IRect {
     type Output = Self;
 
+    #[inline]
     fn sub(self, rhs: IVec2) -> Self::Output {
         Self::from_corners(self.min - rhs, self.max - rhs)
     }
 }
 
 impl<U: Unsigned + NumCast + Copy> From<Region<U>> for IRect {
+    #[inline]
     fn from(region: Region<U>) -> Self {
         IRect::from(&region)
     }
 }
 
 impl<U: Unsigned + NumCast + Copy> From<&Region<U>> for IRect {
+    #[inline]
     fn from(region: &Region<U>) -> Self {
         let size: i32 = num_traits::cast(region.size()).unwrap();
         let min = region.point();
@@ -370,12 +374,14 @@ impl<U: Unsigned + NumCast + Copy> From<&Region<U>> for IRect {
 }
 
 impl From<Line> for IRect {
+    #[inline]
     fn from(line: Line) -> Self {
         IRect::from(&line)
     }
 }
 
 impl From<&Line> for IRect {
+    #[inline]
     fn from(line: &Line) -> Self {
         line.aabb()
     }
@@ -385,6 +391,7 @@ impl IntoIterator for IRect {
     type Item = (i32, i32);
     type IntoIter = RectPixelIterator;
 
+    #[inline]
     fn into_iter(self) -> Self::IntoIter {
         let x = self.x();
         let y = self.y();
@@ -401,6 +408,7 @@ pub struct RectPixelIterator {
 impl Iterator for RectPixelIterator {
     type Item = (i32, i32);
 
+    #[inline]
     fn next(&mut self) -> Option<Self::Item> {
         if self.x < self.rect.max.x {
             let x = self.x;

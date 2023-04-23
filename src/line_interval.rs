@@ -34,6 +34,7 @@ pub struct LineInterval {
 }
 
 impl LineInterval {
+    #[inline]
     pub fn line_segment(line: Line) -> LineInterval {
         LineInterval {
             line,
@@ -41,6 +42,7 @@ impl LineInterval {
         }
     }
 
+    #[inline]
     pub fn ray(line: Line) -> LineInterval {
         LineInterval {
             line,
@@ -48,6 +50,7 @@ impl LineInterval {
         }
     }
 
+    #[inline]
     pub fn line(line: Line) -> LineInterval {
         LineInterval {
             line,
@@ -130,6 +133,7 @@ pub enum LineRelation {
 }
 
 impl LineRelation {
+    #[inline]
     pub fn unique_intersection(self) -> Option<IVec2> {
         match self {
             LineRelation::DivergentIntersecting(p) => Some(p),

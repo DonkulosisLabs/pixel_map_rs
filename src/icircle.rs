@@ -62,19 +62,22 @@ impl ICircle {
         IRect::centered_at(self.point, size, size)
     }
 
+    /// Get the axis-aligned largest rectangle contained within the circle.
     #[inline]
-    pub fn inner_aabb(&self) -> IRect {
+    pub fn inner_rect(&self) -> IRect {
         let size = (self.radius as f32 * 2f32.sqrt()) as u32;
         IRect::centered_at(self.point, size, size)
     }
 }
 
 impl From<IRect> for ICircle {
+    #[inline]
     fn from(rect: IRect) -> Self {
         ICircle::from(&rect)
     }
 }
 impl From<&IRect> for ICircle {
+    #[inline]
     fn from(rect: &IRect) -> Self {
         let radius = rect.width().min(rect.height()) / 2;
         let p = (
@@ -89,6 +92,7 @@ impl IntoIterator for ICircle {
     type Item = (i32, i32);
     type IntoIter = CirclePixelIterator;
 
+    #[inline]
     fn into_iter(self) -> Self::IntoIter {
         CirclePixelIterator::new(self)
     }
@@ -101,6 +105,7 @@ pub struct CirclePixelIterator {
 }
 
 impl CirclePixelIterator {
+    #[inline]
     pub fn new(circle: ICircle) -> Self {
         let y = -(circle.radius as i32);
         let r = circle.radius as i32;

@@ -27,6 +27,7 @@ pub enum Direction {
 
 impl Direction {
     /// Returns the unit vector for this direction.
+    #[inline]
     pub fn unit(&self) -> IVec2 {
         match self {
             Direction::North => NORTH,
@@ -41,11 +42,13 @@ impl Direction {
     }
 
     /// Move a point in this direction by the given amount.
+    #[inline]
     pub fn move_point(&self, point: IVec2, by: i32) -> IVec2 {
         point + self.unit() * by
     }
 
     /// Returns true if this direction is cardinal (N, E, S, W).
+    #[inline]
     pub fn is_cardinal(&self) -> bool {
         matches!(
             self,
@@ -54,6 +57,7 @@ impl Direction {
     }
 
     /// Returns true if this direction is diagonal (NE, NW, SE, SW).
+    #[inline]
     pub fn is_diagonal(&self) -> bool {
         matches!(
             self,

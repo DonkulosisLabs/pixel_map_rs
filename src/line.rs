@@ -54,6 +54,7 @@ impl Line {
     }
 
     /// Create a new line that is the rotation of this line around the given point, by the given radians.
+    #[inline]
     pub fn rotate_around(&self, center: IVec2, radians: f32) -> Self {
         let cos_theta = f32::cos(radians);
         let sin_theta = f32::sin(radians);
@@ -147,6 +148,7 @@ impl Line {
     }
 
     /// Determine if this line intersects the given rectangle.
+    #[inline]
     pub fn intersects_rect(&self, rect: &IRect) -> bool {
         for seg in rect.segments() {
             if self.intersects_line(&seg).is_some() {
@@ -165,8 +167,9 @@ impl Line {
         plot_line(self.start.x, self.start.y, self.end.x, self.end.y, visitor);
     }
 
+    #[inline]
     pub fn iter(&self) -> LineIterator {
-        LineIterator::new(&self)
+        LineIterator::new(self)
     }
 }
 
@@ -174,6 +177,7 @@ impl IntoIterator for Line {
     type Item = IVec2;
     type IntoIter = LineIterator;
 
+    #[inline]
     fn into_iter(self) -> Self::IntoIter {
         LineIterator::new(&self)
     }

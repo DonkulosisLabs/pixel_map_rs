@@ -378,17 +378,17 @@ impl<T: Copy + PartialEq, U: Unsigned + NumCast + Copy + Debug> PNode<T, U> {
     }
 
     pub(super) fn draw_circle(&mut self, circle: &ICircle, pixel_size: u8, value: T) {
-        let outer_aabb = circle.aabb();
-        let inner_aabb = circle.inner_aabb();
-        if self.contained_by_rect(&inner_aabb) {
+        let outer_rect = circle.aabb();
+        let inner_rect = circle.inner_rect();
+        if self.contained_by_rect(&inner_rect) {
             self.set_value(value);
-        } else if let Some(outer_aabb) = outer_aabb.intersection(&self.region().into()) {
-            self.draw_rect(&inner_aabb, pixel_size, value);
+        } else if let Some(outer_aabb) = outer_rect.intersection(&self.region().into()) {
+            self.draw_rect(&inner_rect, pixel_size, value);
             for (x, y) in circle.clone().into_iter() {
                 if !outer_aabb.contains((x, y)) {
                     continue;
                 }
-                if inner_aabb.contains((x, y)) {
+                if inner_rect.contains((x, y)) {
                     continue;
                 }
                 self.set_pixel((x, y).into(), pixel_size, value);

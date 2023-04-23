@@ -78,6 +78,7 @@ impl LineIterator {
 impl Iterator for LineIterator {
     type Item = IVec2;
 
+    #[inline]
     fn next(&mut self) -> Option<Self::Item> {
         match self {
             LineIterator::Axis(iter) => iter.next(),
@@ -95,6 +96,7 @@ pub struct AxisLineIterator {
 }
 
 impl AxisLineIterator {
+    #[inline]
     pub(super) fn new(line: &Line) -> Option<Self> {
         let direction = line.axis_alignment().or(line.diagonal_axis_alignment())?;
         Some(Self {
@@ -105,6 +107,7 @@ impl AxisLineIterator {
         })
     }
 
+    #[inline]
     pub fn peek(&self) -> Option<IVec2> {
         if self.finished {
             return None;
@@ -199,6 +202,7 @@ impl AxisLineIterator {
 impl Iterator for AxisLineIterator {
     type Item = IVec2;
 
+    #[inline]
     fn next(&mut self) -> Option<Self::Item> {
         if self.finished {
             None
@@ -248,6 +252,7 @@ impl AngleLineIterator {
         }
     }
 
+    #[inline]
     pub fn peek(&self) -> Option<IVec2> {
         if self.finished {
             return None;
@@ -255,6 +260,7 @@ impl AngleLineIterator {
         Some(self.point)
     }
 
+    #[inline]
     pub fn seek_bounds(&mut self, bounds: &IRect) -> Option<IVec2> {
         while let Some(point) = self.next() {
             if let Some(next) = self.peek() {
@@ -283,11 +289,11 @@ impl Iterator for AngleLineIterator {
                 self.e2 = self.err * 2;
                 if self.e2 > -self.dist.y {
                     self.err -= self.dist.y;
-                    self.point = self.point + IVec2::new(self.xi, 0);
+                    self.point += IVec2::new(self.xi, 0);
                 }
                 if self.e2 < self.dist.x {
                     self.err += self.dist.x;
-                    self.point = self.point + IVec2::new(0, self.yi);
+                    self.point += IVec2::new(0, self.yi);
                 }
             }
             Some(result)

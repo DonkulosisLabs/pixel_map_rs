@@ -1,6 +1,7 @@
 use super::{
     Children, ICircle, IRect, PNode, RayCast, RayCastContext, RayCastQuery, RayCastResult, Region,
 };
+use crate::Quadrant;
 use glam::IVec2;
 use num_traits::{NumCast, Unsigned};
 use std::fmt::{Debug, Formatter};
@@ -19,13 +20,19 @@ pub struct PixelMap<T: Copy + PartialEq = bool, U: Unsigned + NumCast + Copy + D
 }
 
 impl<T: Copy + PartialEq, U: Unsigned + NumCast + Copy + Debug> PixelMap<T, U> {
-    /// Create a new [Self]. The pixel size must be a power of two.
+    /// Create a new [PixelMap].
     ///
     /// # Parameters
     ///
-    /// - `region`: The region that this [Self] covers.
-    /// - `value`: The initial value of all pixels in this [Self].
-    /// - `pixel_size`: The pixel size of this [Self] that is considered the smallest divisible unit.
+    /// - `region`: The region that this [PixelMap] covers.
+    /// - `value`: The initial value of all pixels in this [PixelMap].
+    /// - `pixel_size`: The pixel size of this [PixelMap] that is considered the smallest divisible unit.
+    ///   Must be a power of two.
+    ///
+    /// # Panics
+    ///
+    /// If `pixel_size` is not a power of two.
+    #[inline]
     pub fn new(region: Region<U>, value: T, pixel_size: u8) -> Self {
         assert!(pixel_size.is_power_of_two());
         Self {
@@ -34,14 +41,14 @@ impl<T: Copy + PartialEq, U: Unsigned + NumCast + Copy + Debug> PixelMap<T, U> {
         }
     }
 
-    /// Obtain the pixel size of this [Self]. When a node's region is of this size, it cannot
+    /// Obtain the pixel size of this [PixelMap]. When a node's region is of this size, it cannot
     /// be subdivided further.
     #[inline]
     pub fn pixel_size(&self) -> u8 {
         self.pixel_size
     }
 
-    /// Obtain the region that this [Self] covers.
+    /// Obtain the region that this [PixelMap] covers.
     #[inline]
     pub fn region(&self) -> &Region<U> {
         self.root.region()
@@ -49,7 +56,7 @@ impl<T: Copy + PartialEq, U: Unsigned + NumCast + Copy + Debug> PixelMap<T, U> {
 
     /// Discard any existing pixel data and set the root node's value to that provided.
     ///
-    /// # Parameters:
+    /// # Parameters
     ///
     /// - `value`: The value to assign to the root node.
     #[inline]
@@ -58,7 +65,7 @@ impl<T: Copy + PartialEq, U: Unsigned + NumCast + Copy + Debug> PixelMap<T, U> {
     }
 
     /// Get the value of the pixel at the given coordinates. If the coordinates are outside the
-    /// region covered by this [Self], None is returned.
+    /// region covered by this [PixelMap], None is returned.
     ///
     /// # Parameters
     ///
@@ -84,7 +91,7 @@ impl<T: Copy + PartialEq, U: Unsigned + NumCast + Copy + Debug> PixelMap<T, U> {
     ///
     /// # Returns
     ///
-    /// If the coordinates are outside the region covered by this [Self], `false` is returned.
+    /// If the coordinates are outside the region covered by this [PixelMap], `false` is returned.
     /// Otherwise, `true` is returned.
     #[inline]
     pub fn set_pixel<P>(&mut self, point: P, value: T) -> bool
@@ -110,7 +117,7 @@ impl<T: Copy + PartialEq, U: Unsigned + NumCast + Copy + Debug> PixelMap<T, U> {
     /// # Returns
     ///
     /// If the rectangle does not overlap
-    /// the region covered by this [Self], false is returned. Otherwise, true is returned.
+    /// the region covered by this [PixelMap], false is returned. Otherwise, true is returned.
     #[inline]
     pub fn draw_rect(&mut self, rect: &IRect, value: T) -> bool {
         if rect.intersects_rect(&self.root.region().into()) {
@@ -131,7 +138,7 @@ impl<T: Copy + PartialEq, U: Unsigned + NumCast + Copy + Debug> PixelMap<T, U> {
     /// # Returns
     ///
     /// If the circle's aabb does not overlap
-    /// the region covered by this [Self], false is returned. Otherwise, true is returned.
+    /// the region covered by this [PixelMap], false is returned. Otherwise, true is returned.
     #[inline]
     pub fn draw_circle(&mut self, circle: &ICircle, value: T) -> bool {
         if circle.aabb().intersects_rect(&self.root.region().into()) {
@@ -142,7 +149,7 @@ impl<T: Copy + PartialEq, U: Unsigned + NumCast + Copy + Debug> PixelMap<T, U> {
         }
     }
 
-    /// Visit all leaf nodes in this [Self] in pre-order.
+    /// Visit all leaf nodes in this [PixelMap] in pre-order.
     ///
     /// # Parameters
     ///
@@ -155,7 +162,7 @@ impl<T: Copy + PartialEq, U: Unsigned + NumCast + Copy + Debug> PixelMap<T, U> {
         self.root.visit_leaves(&mut visitor);
     }
 
-    /// Visit all leaf nodes in this [Self] that overlap with the given rectangle.
+    /// Visit all leaf nodes in this [PixelMap] that overlap with the given rectangle.
     ///
     /// # Parameters
     ///
@@ -191,7 +198,7 @@ impl<T: Copy + PartialEq, U: Unsigned + NumCast + Copy + Debug> PixelMap<T, U> {
     ///
     /// `Some(true)` if any of the leaf nodes within the bounds of `rect` match the
     /// predicate. Or `Some(false)` if no nodes within `rect` match the predicate.
-    /// `None` if `rect` does not overlap the region covered by this [Self].
+    /// `None` if `rect` does not overlap the region covered by this [PixelMap].
     #[inline]
     pub fn any_in_rect<F>(&self, rect: &IRect, mut f: F) -> Option<bool>
     where
@@ -214,7 +221,7 @@ impl<T: Copy + PartialEq, U: Unsigned + NumCast + Copy + Debug> PixelMap<T, U> {
     ///
     /// `Some(true)` if all of the leaf nodes within the bounds of `rect` match the
     /// predicate. Or `Some(false)` if none or some of the nodes within `rect` match the predicate.
-    /// `None` if `rect` does not overlap the region covered by this [Self].
+    /// `None` if `rect` does not overlap the region covered by this [PixelMap].
     #[inline]
     pub fn all_in_rect<F>(&self, rect: &IRect, mut f: F) -> Option<bool>
     where
@@ -223,7 +230,7 @@ impl<T: Copy + PartialEq, U: Unsigned + NumCast + Copy + Debug> PixelMap<T, U> {
         self.root.all_leaves_in_rect(rect, &mut f)
     }
 
-    /// Visit all leaf nodes in this [Self] that are marked as dirty. This is useful for examining
+    /// Visit all leaf nodes in this [PixelMap] that are marked as dirty. This is useful for examining
     /// only leaf nodes that have changed (became dirty), and to limit time spent traversing
     /// the quad tree. Dirty status is not changed.
     ///
@@ -244,7 +251,7 @@ impl<T: Copy + PartialEq, U: Unsigned + NumCast + Copy + Debug> PixelMap<T, U> {
         traversed
     }
 
-    /// Visit all leaf nodes in this [Self] that are marked as dirty, and consume
+    /// Visit all leaf nodes in this [PixelMap] that are marked as dirty, and consume
     /// their dirty status (by modifying their dirty state to be `false`). This is useful for operating
     /// only on leaf nodes that have changed (became dirty), and to limit time spent traversing
     /// the quad tree.
@@ -266,7 +273,7 @@ impl<T: Copy + PartialEq, U: Unsigned + NumCast + Copy + Debug> PixelMap<T, U> {
         traversed
     }
 
-    /// Clear the dirty status of the root of this [Self]. This is done in a shallow manner,
+    /// Clear the dirty status of the root of this [PixelMap]. This is done in a shallow manner,
     /// such that dirty state at any further depth is retained. Subsequent calls to [Self::visit_dirty()]
     /// or [Self::drain_dirty()] will not traverse any nodes as none that are dirty are reachable.
     /// But, if branch A was dirty, [Self::clear_dirty()] is called, and then branch B becomes dirty,
@@ -323,7 +330,7 @@ impl<T: Copy + PartialEq, U: Unsigned + NumCast + Copy + Debug> PixelMap<T, U> {
         (vertices, indices)
     }
 
-    /// Visit all leaf nodes in this [Self] for which the region overlaps with the line
+    /// Visit all leaf nodes in this [PixelMap] for which the region overlaps with the line
     /// defined by the [RayCastQuery].
     ///
     /// # Parameters
@@ -336,6 +343,7 @@ impl<T: Copy + PartialEq, U: Unsigned + NumCast + Copy + Debug> PixelMap<T, U> {
     /// # Returns
     ///
     /// A [RayCastResult] that contains the collision result and related information.
+    #[inline]
     pub fn ray_cast<F>(&self, query: RayCastQuery, mut collision_check: F) -> RayCastResult
     where
         F: FnMut(&PNode<T, U>) -> RayCast,
@@ -354,11 +362,11 @@ impl<T: Copy + PartialEq, U: Unsigned + NumCast + Copy + Debug> PixelMap<T, U> {
         }
     }
 
-    /// Collect statistics by traversing the [Self] quad tree.
+    /// Collect statistics by traversing the [PixelMap] quad tree.
     ///
     /// # Returns
     ///
-    /// A [Stats] struct that contains information about [Self]'s current state.
+    /// A [Stats] struct that contains information about [PixelMap]'s current state.
     pub fn stats(&self) -> Stats {
         let mut stats = Stats::default();
         self.root.visit_nodes(&mut |node| {
@@ -374,14 +382,14 @@ impl<T: Copy + PartialEq, U: Unsigned + NumCast + Copy + Debug> PixelMap<T, U> {
         stats
     }
 
-    /// Combine another [Self] with this one using a function that decides how to combine
-    /// the colors of each pixel. This [Self]'s region should overlap with the other [Self]'s region,
+    /// Combine another [PixelMap] with this one using a function that decides how to combine
+    /// the colors of each pixel. This [PixelMap]'s region should overlap with the other [PixelMap]'s region,
     /// otherwise this operation has no effect.
     ///
     /// # Parameters
     ///
-    /// - `other`: The other [Self] to combine with this one.
-    /// - `offset`: The other [Self] is sampled according to this offset vector.
+    /// - `other`: The other [PixelMap] to combine with this one.
+    /// - `offset`: The other [PixelMap] is sampled according to this offset vector.
     /// - `combiner`: A closure that takes two values and returns a resulting value.
     ///
     /// # Examples
@@ -389,8 +397,13 @@ impl<T: Copy + PartialEq, U: Unsigned + NumCast + Copy + Debug> PixelMap<T, U> {
     /// This method can be used to implement boolean operations, such as union, intersection,
     /// disjunction, etc., according to the combiner function's implementation.
     ///
-    /// To compute the union of two [Self]s:
+    /// To compute the union of two [PixelMap]s:
     /// ```
+    /// # use pixel_map::{PixelMap, Region};
+    /// # #[derive(Copy,Clone,PartialEq)]
+    /// # enum Color { BLACK, WHITE }
+    /// # let mut pixel_map: PixelMap<Color, u16> = PixelMap::new(Region::new(0, 0, 10), Color::WHITE, 1);
+    /// # let mut other: PixelMap<Color, u16> = PixelMap::new(Region::new(0, 0, 10), Color::BLACK, 1);
     /// // Union (OR)
     /// pixel_map.combine(&other, (0, 0), |c1, c2| {
     ///     if c1 == &Color::BLACK || c2 == &Color::BLACK {
@@ -401,8 +414,13 @@ impl<T: Copy + PartialEq, U: Unsigned + NumCast + Copy + Debug> PixelMap<T, U> {
     /// });
     /// ```
     ///
-    /// Compute an intersection of two [Self]s:
+    /// Compute an intersection of two [PixelMap]s:
     /// ```
+    /// # use pixel_map::{PixelMap, Region};
+    /// # #[derive(Copy,Clone,PartialEq)]
+    /// # enum Color { BLACK, WHITE }
+    /// # let mut pixel_map: PixelMap<Color, u16> = PixelMap::new(Region::new(0, 0, 10), Color::WHITE, 1);
+    /// # let mut other: PixelMap<Color, u16> = PixelMap::new(Region::new(0, 0, 10), Color::BLACK, 1);
     /// // Intersection (AND)
     /// pixel_map.combine(&other, (0, 0), |c1, c2| {
     ///    if c1 == &Color::BLACK && c2 == &Color::BLACK {
@@ -432,15 +450,17 @@ impl<T: Copy + PartialEq, U: Unsigned + NumCast + Copy + Debug> PixelMap<T, U> {
         }
     }
 
-    /// Take the four top-level quadrant nodes in this [Self] and
-    /// create separate [Self]s for each quadrant. The resulting slice can be indexed
+    /// Take the four top-level quadrant nodes in this [PixelMap] and
+    /// create separate [PixelMap]s for each quadrant. The resulting slice can be indexed
     /// by [crate::Quadrant].
     ///
     /// # Returns
     ///
-    /// `Some` of a slice of four [Self]s, one for each quadrant, if the top level node in this [Self]
+    /// `Some` of a slice of four [PixelMap]s, one for each quadrant, if the top level node in this [PixelMap]
     /// has children. Otherwise, returns `None`.
-    pub fn split(&mut self) -> Option<[PixelMap<T, U>; 4]> {
+    #[must_use]
+    #[inline]
+    pub fn split(mut self) -> Option<[PixelMap<T, U>; 4]> {
         match self.root.take_children() {
             Some(children) => {
                 let result: [PixelMap<T, U>; 4] = children.map(|c| PixelMap {
@@ -453,27 +473,36 @@ impl<T: Copy + PartialEq, U: Unsigned + NumCast + Copy + Debug> PixelMap<T, U> {
         }
     }
 
-    /// Join the given four quadrant [Self]s into a single [Self].
-    /// If any of the quadrant [Self]s are dirty, the resulting [Self] will be dirty.
+    /// Join the given four quadrant [PixelMap]s into a single [PixelMap].
+    /// If any of the quadrant [PixelMap]s are dirty, the resulting [PixelMap] will be dirty.
     ///
     /// # Parameters
     ///
-    /// - `quads`: The four quadrant [Self]s to join. The regions of the four quadrant [Self]s must
+    /// - `quads`: The four quadrant [PixelMap]s to join. The regions of the four quadrant [PixelMap]s must
     ///   be the same size and must be offset such that they meet each other with no gaps or overlap.
     ///
     /// # Returns
     ///
-    /// A new [Self] that contains the four quadrant [Self]s.
+    /// A new [PixelMap] that contains the four quadrant [PixelMap]s.
     ///
     /// # Panics
     ///
-    /// - If the four quadrant [Self]s have different pixel sizes.
-    /// - If the four quadrant [Self]s are different sizes.
-    /// - If the four quadrant [Self]s are not positioned in the `quads` slice according to [crate::Quadrant].
+    /// - If the four quadrant [PixelMap]s have different pixel sizes.
+    /// - If the four quadrant [PixelMap]s are different sizes.
+    /// - If the four quadrant [PixelMap]s are not positioned in the `quads` slice according to [crate::Quadrant].
+    #[must_use]
+    #[inline]
     pub fn join(quads: [PixelMap<T, U>; 4]) -> Self {
+        let mut size: Option<u32> = None;
         let mut pixel_size: Option<u8> = None;
         let mut dirty = false;
         for pm in &quads {
+            let quad_size: u32 = num_traits::cast::cast(pm.root.region().size()).unwrap();
+            if let Some(s) = size {
+                assert_eq!(s, quad_size);
+            } else {
+                size = Some(quad_size);
+            }
             if let Some(ps) = pixel_size {
                 assert_eq!(ps, pm.pixel_size);
             } else {
@@ -482,7 +511,14 @@ impl<T: Copy + PartialEq, U: Unsigned + NumCast + Copy + Debug> PixelMap<T, U> {
             dirty = dirty || pm.root.dirty();
         }
 
-        // TODO: validate quadrant positioning in slice
+        let bl = quads[Quadrant::BottomLeft as usize].root.region();
+        let br = quads[Quadrant::BottomRight as usize].root.region();
+        let tl = quads[Quadrant::TopLeft as usize].root.region();
+        let tr = quads[Quadrant::TopRight as usize].root.region();
+        assert_eq!(bl.x() + bl.size(), br.x());
+        assert_eq!(tl.x() + tl.size(), tr.x());
+        assert_eq!(bl.y() + bl.size(), tl.y());
+        assert_eq!(br.y() + br.size(), tr.y());
 
         let children: Children<T, U> = quads.map(|pm| Box::new(pm.root));
         let root = PNode::with_children(children, dirty);
@@ -608,7 +644,6 @@ mod test {
         pm.set_pixel((0, 0), 1);
         assert!(pm.root.children().is_some());
         let children = pm.split().unwrap();
-        assert!(pm.root.children().is_none());
         assert_eq!(children[Quadrant::BottomLeft as usize].root.value(), 1);
         assert_eq!(children[Quadrant::BottomRight as usize].root.value(), 0);
         assert_eq!(children[Quadrant::TopLeft as usize].root.value(), 0);
