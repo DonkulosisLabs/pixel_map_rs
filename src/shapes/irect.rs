@@ -6,30 +6,16 @@ use num_traits::{NumCast, Unsigned};
 use std::ops;
 
 /// An immutable rectangle defined by a minimum and maximum point, in integer coordinates.
-#[derive(Debug, Clone, Eq, PartialEq)]
+#[derive(Debug, Clone, Default, Eq, PartialEq)]
 pub struct IRect {
     min: IVec2,
     max: IVec2,
-}
-
-impl Default for IRect {
-    fn default() -> Self {
-        Self::ZERO
-    }
 }
 
 impl IRect {
     pub const ZERO: Self = Self {
         min: IVec2::ZERO,
         max: IVec2::ZERO,
-    };
-    pub const ONE: Self = Self {
-        min: IVec2::ONE,
-        max: IVec2::ONE,
-    };
-    pub const NEG_ONE: Self = Self {
-        min: IVec2::NEG_ONE,
-        max: IVec2::NEG_ONE,
     };
 
     /// Create a new [IRect] with the given minimum and maximum points.

@@ -6,8 +6,8 @@ pub fn plot_line<F>(x0: i32, y0: i32, x1: i32, y1: i32, mut plot: F)
 where
     F: FnMut(i32, i32),
 {
-    let dx = i32::abs(x1 - x0);
-    let dy = i32::abs(y1 - y0);
+    let dx = (x1 - x0).abs();
+    let dy = (y1 - y0).abs();
     let mut x = x0;
     let mut y = y0;
     let mut xi = 1;
@@ -119,72 +119,28 @@ impl AxisLineIterator {
     pub fn seek_bounds(&mut self, bounds: &IRect) -> Option<IVec2> {
         let point = self.next()?;
 
-        let top = bounds.top_bounds();
-        let left = bounds.left_bounds();
-        let right = bounds.right_bounds();
-        let bottom = bounds.bottom_bounds();
+        let top = bounds.top_bounds().min(self.end.y);
+        let left = bounds.left_bounds().max(self.end.x);
+        let right = bounds.right_bounds().min(self.end.x);
+        let bottom = bounds.bottom_bounds().max(self.end.y);
 
         let result = match self.direction {
-            Direction::North => Some(IVec2::new(point.x, self.end.y.min(top))),
-            Direction::NorthEast => {
-                let x_distance = right - self.end.x;
-                let y_distance = top - self.end.y;
-                let (x, y) = if x_distance < y_distance {
-                    (right, self.end.y + x_distance)
-                } else {
-                    (self.end.x + y_distance, top)
-                };
-                if y > point.y {
-                    Some(IVec2::new(x, y))
-                } else {
-                    Some(point)
-                }
-            }
+            Direction::North => Some(IVec2::new(point.x, top)),
+            Direction::NorthEast => Some(IVec2::new(right, top)),
             Direction::NorthWest => {
-                let x_distance = self.end.x - left;
-                let y_distance = top - self.end.y;
-                let (x, y) = if x_distance < y_distance {
-                    (left, self.end.y + x_distance)
-                } else {
-                    (self.end.x - y_distance, top)
-                };
-                if y > point.y {
-                    Some(IVec2::new(x, y))
-                } else {
-                    Some(point)
-                }
+                // account for the left being inclusive and the top being exclusive
+                let left = (bounds.left_bounds() + 1).max(self.end.x);
+                Some(IVec2::new(left, top))
             }
-            Direction::East => Some(IVec2::new(self.end.x.min(right), point.y)),
-            Direction::South => Some(IVec2::new(point.x, self.end.y.max(bottom))),
+            Direction::East => Some(IVec2::new(right, point.y)),
+            Direction::South => Some(IVec2::new(point.x, bottom)),
             Direction::SouthEast => {
-                let x_distance = right - self.end.x;
-                let y_distance = self.end.y - bottom;
-                let (x, y) = if x_distance < y_distance {
-                    (right, self.end.y - x_distance)
-                } else {
-                    (self.end.x + y_distance, bottom)
-                };
-                if y < point.y {
-                    Some(IVec2::new(x, y))
-                } else {
-                    Some(point)
-                }
+                // account for the right being exclusive and the bottom being inclusive
+                let bottom = (bounds.bottom_bounds() + 1).max(self.end.y);
+                Some(IVec2::new(right, bottom))
             }
-            Direction::SouthWest => {
-                let x_distance = self.end.x - left;
-                let y_distance = self.end.y - bottom;
-                let (x, y) = if x_distance < y_distance {
-                    (left, self.end.y - x_distance)
-                } else {
-                    (self.end.x - y_distance, bottom)
-                };
-                if y < point.y {
-                    Some(IVec2::new(x, y))
-                } else {
-                    Some(point)
-                }
-            }
-            Direction::West => Some(IVec2::new(self.end.x.max(left), point.y)),
+            Direction::SouthWest => Some(IVec2::new(left, bottom)),
+            Direction::West => Some(IVec2::new(left, point.y)),
         };
 
         match result {
@@ -212,7 +168,7 @@ impl Iterator for AxisLineIterator {
             if self.point == self.end {
                 self.finished = true;
             } else {
-                self.point = self.point + self.direction.unit();
+                self.point += self.direction.unit();
             }
             Some(result)
         }
@@ -238,7 +194,7 @@ impl AngleLineIterator {
         let y0 = line.start().y;
         let x1 = line.end().x;
         let y1 = line.end().y;
-        let dist = IVec2::new(i32::abs(x1 - x0), i32::abs(y1 - y0));
+        let dist = IVec2::new((x1 - x0).abs(), (y1 - y0).abs());
         let xi = if x1 < x0 { -1 } else { 1 };
         let yi = if y1 < y0 { -1 } else { 1 };
         AngleLineIterator {
@@ -506,7 +462,7 @@ mod test {
                     let n = iter.next().unwrap();
                     assert_eq!(n, current, "{:?}, Iter: {:?}", test_case, iter);
 
-                    current = current + test_case.unit;
+                    current += test_case.unit;
                 }
                 assert_eq!(iter.peek(), None, "{:?}, Iter: {:?}", test_case, iter);
                 assert_eq!(iter.peek(), None, "{:?}, Iter: {:?}", test_case, iter);
@@ -516,10 +472,11 @@ mod test {
         }
     }
 
-    //#[test]
+    #[test]
     fn test_seek_bounds() {
         #[derive(Debug)]
         struct TestCase {
+            name: String,
             line: ILine,
             seek_bounds_ops: Vec<SeekBoundsOp>,
         }
@@ -533,7 +490,8 @@ mod test {
 
         let test_cases = vec![
             TestCase {
-                line: ILine::new((0, 0), (0, 10)), // N
+                name: "N".to_string(),
+                line: ILine::new((0, 0), (0, 10)),
                 seek_bounds_ops: vec![
                     SeekBoundsOp {
                         bounds: IRect::new(0, 0, 2, 2),
@@ -553,47 +511,8 @@ mod test {
                 ],
             },
             TestCase {
-                line: ILine::new((0, 0), (10, 10)), // NE
-                seek_bounds_ops: vec![
-                    SeekBoundsOp {
-                        bounds: IRect::new(0, 0, 2, 2),
-                        expected_result: Some((1, 1).into()),
-                        expected_next: Some((2, 2).into()),
-                    },
-                    SeekBoundsOp {
-                        bounds: IRect::new(2, 2, 6, 6),
-                        expected_result: Some((5, 5).into()),
-                        expected_next: Some((6, 6).into()),
-                    },
-                    SeekBoundsOp {
-                        bounds: IRect::new(6, 6, 12, 12),
-                        expected_result: Some((10, 10).into()),
-                        expected_next: None,
-                    },
-                ],
-            },
-            TestCase {
-                line: ILine::new((10, 0), (0, 10)), // NW
-                seek_bounds_ops: vec![
-                    SeekBoundsOp {
-                        bounds: IRect::new(8, 0, 10, 2),
-                        expected_result: Some((8, 2).into()),
-                        expected_next: Some((7, 3).into()),
-                    },
-                    SeekBoundsOp {
-                        bounds: IRect::new(4, 2, 8, 6),
-                        expected_result: Some((4, 6).into()),
-                        expected_next: Some((3, 7).into()),
-                    },
-                    SeekBoundsOp {
-                        bounds: IRect::new(-2, 6, 4, 12),
-                        expected_result: Some((10, 10).into()),
-                        expected_next: None,
-                    },
-                ],
-            },
-            TestCase {
-                line: ILine::new((0, 0), (10, 0)), // E
+                name: "E".to_string(),
+                line: ILine::new((0, 0), (10, 0)),
                 seek_bounds_ops: vec![
                     SeekBoundsOp {
                         bounds: IRect::new(0, 0, 2, 2),
@@ -613,17 +532,18 @@ mod test {
                 ],
             },
             TestCase {
-                line: ILine::new((0, 0), (0, -10)), // S
+                name: "S".to_string(),
+                line: ILine::new((0, 0), (0, -10)),
                 seek_bounds_ops: vec![
                     SeekBoundsOp {
                         bounds: IRect::new(0, -2, 2, 0),
-                        expected_result: Some((0, -1).into()),
-                        expected_next: Some((0, -2).into()),
+                        expected_result: Some((0, -2).into()),
+                        expected_next: Some((0, -3).into()),
                     },
                     SeekBoundsOp {
                         bounds: IRect::new(0, -6, 4, -2),
-                        expected_result: Some((0, -5).into()),
-                        expected_next: Some((0, -6).into()),
+                        expected_result: Some((0, -6).into()),
+                        expected_next: Some((0, -7).into()),
                     },
                     SeekBoundsOp {
                         bounds: IRect::new(0, -12, 6, -6),
@@ -633,17 +553,18 @@ mod test {
                 ],
             },
             TestCase {
-                line: ILine::new((0, 0), (-10, 0)), // W
+                name: "W".to_string(),
+                line: ILine::new((0, 0), (-10, 0)),
                 seek_bounds_ops: vec![
                     SeekBoundsOp {
                         bounds: IRect::new(-2, 0, 0, 2),
-                        expected_result: Some((-1, 0).into()),
-                        expected_next: Some((-2, 0).into()),
+                        expected_result: Some((-2, 0).into()),
+                        expected_next: Some((-3, 0).into()),
                     },
                     SeekBoundsOp {
                         bounds: IRect::new(-6, 0, -2, 4),
-                        expected_result: Some((-5, 0).into()),
-                        expected_next: Some((-6, 0).into()),
+                        expected_result: Some((-6, 0).into()),
+                        expected_next: Some((-7, 0).into()),
                     },
                     SeekBoundsOp {
                         bounds: IRect::new(-12, 0, -6, 6),
@@ -653,17 +574,60 @@ mod test {
                 ],
             },
             TestCase {
-                line: ILine::new((0, 0), (-10, -10)), // SW
+                name: "NE".to_string(),
+                line: ILine::new((0, 0), (10, 10)),
+                seek_bounds_ops: vec![
+                    SeekBoundsOp {
+                        bounds: IRect::new(0, 0, 2, 2),
+                        expected_result: Some((1, 1).into()),
+                        expected_next: Some((2, 2).into()),
+                    },
+                    SeekBoundsOp {
+                        bounds: IRect::new(2, 2, 6, 6),
+                        expected_result: Some((5, 5).into()),
+                        expected_next: Some((6, 6).into()),
+                    },
+                    SeekBoundsOp {
+                        bounds: IRect::new(6, 6, 12, 12),
+                        expected_result: Some((10, 10).into()),
+                        expected_next: None,
+                    },
+                ],
+            },
+            TestCase {
+                name: "NW".to_string(),
+                line: ILine::new((10, 0), (0, 10)),
+                seek_bounds_ops: vec![
+                    SeekBoundsOp {
+                        bounds: IRect::new(8, 0, 10, 2),
+                        expected_result: Some((9, 1).into()),
+                        expected_next: Some((8, 2).into()),
+                    },
+                    SeekBoundsOp {
+                        bounds: IRect::new(4, 2, 8, 6),
+                        expected_result: Some((5, 5).into()),
+                        expected_next: Some((4, 6).into()),
+                    },
+                    SeekBoundsOp {
+                        bounds: IRect::new(-2, 6, 4, 12),
+                        expected_result: Some((0, 10).into()),
+                        expected_next: None,
+                    },
+                ],
+            },
+            TestCase {
+                name: "SW".to_string(),
+                line: ILine::new((0, 0), (-10, -10)),
                 seek_bounds_ops: vec![
                     SeekBoundsOp {
                         bounds: IRect::new(-2, -2, 0, 0),
-                        expected_result: Some((-1, -1).into()),
-                        expected_next: Some((-2, -2).into()),
+                        expected_result: Some((-2, -2).into()),
+                        expected_next: Some((-3, -3).into()),
                     },
                     SeekBoundsOp {
                         bounds: IRect::new(-6, -6, -2, -2),
-                        expected_result: Some((-5, -5).into()),
-                        expected_next: Some((-6, -6).into()),
+                        expected_result: Some((-6, -6).into()),
+                        expected_next: Some((-7, -7).into()),
                     },
                     SeekBoundsOp {
                         bounds: IRect::new(-12, -12, -6, -6),
@@ -673,7 +637,8 @@ mod test {
                 ],
             },
             TestCase {
-                line: ILine::new((0, 0), (10, -10)), // SE
+                name: "SE".to_string(),
+                line: ILine::new((0, 0), (10, -10)),
                 seek_bounds_ops: vec![
                     SeekBoundsOp {
                         bounds: IRect::new(0, -2, 2, 0),
@@ -705,13 +670,14 @@ mod test {
                     let p = iter.seek_bounds(&op.bounds);
                     assert_eq!(
                         p, op.expected_result,
-                        "Line: {:?}, op: {:?}",
-                        &test_case.line, op
+                        "{}: Result: Line: {:?}, op: {:?}",
+                        &test_case.name, &test_case.line, op
                     );
                     assert_eq!(
                         iter.next(),
                         op.expected_next,
-                        "Line: {:?}, op: {:?}",
+                        "{}: Next: Line: {:?}, op: {:?}",
+                        &test_case.name,
                         &test_case.line,
                         op
                     );

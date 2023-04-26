@@ -2,13 +2,18 @@ use super::IRect;
 use glam::IVec2;
 
 /// A circle represented by a center point, in integer coordinates, and a radius.
-#[derive(Debug, Clone, Eq, PartialEq)]
+#[derive(Debug, Clone, Default, Eq, PartialEq)]
 pub struct ICircle {
     point: IVec2,
     radius: u32,
 }
 
 impl ICircle {
+    pub const ZERO: Self = Self {
+        point: IVec2::ZERO,
+        radius: 0,
+    };
+
     /// Creates a new circle with the given center point and radius.
     #[inline]
     pub fn new<P>(point: P, radius: u32) -> Self

@@ -12,6 +12,11 @@ pub struct ILine {
 }
 
 impl ILine {
+    pub const ZERO: Self = Self {
+        start: IVec2::ZERO,
+        end: IVec2::ZERO,
+    };
+
     /// Creates a new line with the given start and end points.
     #[inline]
     pub fn new<P>(start: P, end: P) -> Self
