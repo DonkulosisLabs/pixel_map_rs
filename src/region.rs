@@ -50,6 +50,12 @@ impl<U: Unsigned + NumCast + Copy> Region<U> {
         self.size
     }
 
+    /// Get the size of the region as a `usize`.
+    #[inline]
+    pub fn size_as_usize(&self) -> usize {
+        num_traits::cast::cast(self.size).unwrap()
+    }
+
     /// Get the center point of the region.
     #[inline]
     pub fn center(&self) -> U {
@@ -69,9 +75,18 @@ impl<U: Unsigned + NumCast + Copy> Region<U> {
         P: Into<IVec2>,
     {
         let point = point.into();
-        let x: i32 = num_traits::cast(self.x).unwrap();
-        let y: i32 = num_traits::cast(self.y).unwrap();
-        let size: i32 = num_traits::cast(self.size).unwrap();
+        let x: i32 = match num_traits::cast(self.x) {
+            Some(x) => x,
+            None => return false,
+        };
+        let y: i32 = match num_traits::cast(self.y) {
+            Some(y) => y,
+            None => return false,
+        };
+        let size: i32 = match num_traits::cast(self.size) {
+            Some(size) => size,
+            None => return false,
+        };
         point.x >= x && point.x < x + size && point.y >= y && point.y < y + size
     }
 

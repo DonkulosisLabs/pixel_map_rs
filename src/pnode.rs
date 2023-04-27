@@ -382,12 +382,9 @@ impl<T: Copy + PartialEq, U: Unsigned + NumCast + Copy + Debug> PNode<T, U> {
         let inner_rect = circle.inner_rect();
         if self.contained_by_rect(&inner_rect) {
             self.set_value(value);
-        } else if let Some(outer_aabb) = outer_rect.intersection(&self.region().into()) {
+        } else if outer_rect.intersects_rect(&self.region.clone().into()) {
             self.draw_rect(&inner_rect, pixel_size, value);
             for p in circle.pixels() {
-                if !outer_aabb.contains(p) {
-                    continue;
-                }
                 if inner_rect.contains(p) {
                     continue;
                 }

@@ -6,7 +6,8 @@ use glam::IVec2;
 use num_traits::{NumCast, Unsigned};
 use std::fmt::{Debug, Formatter};
 
-/// A map of pixels implemented by an MX quad tree.
+/// A map of pixels in a square region implemented by an MX quad tree.
+/// The coordinate origin is at the bottom left of the region.
 ///
 /// # Type Parameters
 ///
@@ -34,6 +35,7 @@ impl<T: Copy + PartialEq, U: Unsigned + NumCast + Copy + Debug> PixelMap<T, U> {
     /// If `pixel_size` is not a power of two.
     #[inline]
     pub fn new(region: Region<U>, value: T, pixel_size: u8) -> Self {
+        assert!(region.size_as_usize().is_power_of_two());
         assert!(pixel_size.is_power_of_two());
         Self {
             root: PNode::new(region, value, true),
@@ -424,8 +426,8 @@ impl<T: Copy + PartialEq, U: Unsigned + NumCast + Copy + Debug> PixelMap<T, U> {
     /// # use pixel_map::{PixelMap, Region};
     /// # #[derive(Copy,Clone,PartialEq)]
     /// # enum Color { BLACK, WHITE }
-    /// # let mut pixel_map: PixelMap<Color, u16> = PixelMap::new(Region::new(0, 0, 10), Color::WHITE, 1);
-    /// # let mut other: PixelMap<Color, u16> = PixelMap::new(Region::new(0, 0, 10), Color::BLACK, 1);
+    /// # let mut pixel_map: PixelMap<Color, u16> = PixelMap::new(Region::new(0, 0, 2), Color::WHITE, 1);
+    /// # let mut other: PixelMap<Color, u16> = PixelMap::new(Region::new(0, 0, 2), Color::BLACK, 1);
     /// // Union (OR)
     /// pixel_map.combine(&other, (0, 0), |c1, c2| {
     ///     if c1 == &Color::BLACK || c2 == &Color::BLACK {
@@ -441,8 +443,8 @@ impl<T: Copy + PartialEq, U: Unsigned + NumCast + Copy + Debug> PixelMap<T, U> {
     /// # use pixel_map::{PixelMap, Region};
     /// # #[derive(Copy,Clone,PartialEq)]
     /// # enum Color { BLACK, WHITE }
-    /// # let mut pixel_map: PixelMap<Color, u16> = PixelMap::new(Region::new(0, 0, 10), Color::WHITE, 1);
-    /// # let mut other: PixelMap<Color, u16> = PixelMap::new(Region::new(0, 0, 10), Color::BLACK, 1);
+    /// # let mut pixel_map: PixelMap<Color, u16> = PixelMap::new(Region::new(0, 0, 2), Color::WHITE, 1);
+    /// # let mut other: PixelMap<Color, u16> = PixelMap::new(Region::new(0, 0, 2), Color::BLACK, 1);
     /// // Intersection (AND)
     /// pixel_map.combine(&other, (0, 0), |c1, c2| {
     ///    if c1 == &Color::BLACK && c2 == &Color::BLACK {
@@ -590,7 +592,7 @@ mod test {
 
     #[test]
     fn test_clear() {
-        let mut pm = PixelMap::new(Region::new(0u32, 0u32, 2u32), 0, 1);
+        let mut pm = PixelMap::new(Region::new(0u32, 0, 2), 0, 1);
         pm.set_pixel((1, 1), 1);
         pm.clear(2);
         assert_eq!(pm.root.value(), 2);
