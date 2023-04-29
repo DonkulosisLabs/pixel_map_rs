@@ -275,6 +275,30 @@ impl<T: Copy + PartialEq, U: Unsigned + NumCast + Copy + Debug> PixelMap<T, U> {
         traversed
     }
 
+    /// Visit dirty leaf nodes in this [PixelMap] that overlap with the given rectangle.
+    /// This is useful for examining only leaf nodes that have changed (became dirty), and to
+    /// limit time spent traversing the quad tree. Dirty status is not changed.
+    ///
+    /// # Parameters
+    ///
+    /// - `rect`: The rectangle in which contained or overlapping nodes will be visited.
+    /// - `visitor`: A closure that takes a reference to a leaf node, and a reference to a rectangle as parameters.
+    ///   This rectangle represents the intersection of the node's region and the `rect` parameter supplied to this method.
+    ///
+    /// # Returns
+    ///
+    /// The number of nodes traversed.
+    #[inline]
+    pub fn visit_dirty_in_rect<F>(&self, rect: &IRect, mut visitor: F) -> usize
+    where
+        F: FnMut(&PNode<T, U>, &IRect),
+    {
+        let mut traversed = 0;
+        self.root
+            .visit_dirty_leaves_in_rect(rect, &mut visitor, &mut traversed);
+        traversed
+    }
+
     /// Visit all leaf nodes in this [PixelMap] that are marked as dirty, and consume
     /// their dirty status (by modifying their dirty state to be `false`). This is useful for operating
     /// only on leaf nodes that have changed (became dirty), and to limit time spent traversing
@@ -297,15 +321,32 @@ impl<T: Copy + PartialEq, U: Unsigned + NumCast + Copy + Debug> PixelMap<T, U> {
         traversed
     }
 
-    /// Clear the dirty status of the root of this [PixelMap]. This is done in a shallow manner,
-    /// such that dirty state at any further depth is retained. Subsequent calls to [Self::visit_dirty()]
-    /// or [Self::drain_dirty()] will not traverse any nodes as none that are dirty are reachable.
-    /// But, if branch A was dirty, [Self::clear_dirty()] is called, and then branch B becomes dirty,
-    /// both A and B will be traversed by [Self::visit_dirty()] or [Self::drain_dirty()].
-    /// If a deep clear is desired, use [Self::drain_dirty()] with a no-op visitor function.
+    /// Clear the dirty status of the root of this [PixelMap], according to a shallow or deep strategy.
+    ///
+    /// # Shallow Clear
+    ///
+    /// If dirty state is cleared in a shallow manner, the root node is marked clean, and
+    /// the dirty state at any further depth is retained. Subsequent calls to other methods that
+    /// navigate dirty nodes will not traverse any nodes, as none that are dirty are reachable
+    /// (because the root node is no longer dirty).
+    /// But, if branch `A` was dirty, [Self::clear_dirty] is called, and then branch `B` becomes dirty,
+    /// both `A` and `B` will be traversed by [Self::visit_dirty()] or [Self::drain_dirty()].
+    ///
+    /// # Deep Clear
+    ///
+    /// A deep clear traverses all dirty nodes and marks them as clean.
+    ///
+    /// # Parameters
+    ///
+    /// - `deep`: If `true`, clear the dirty status of all nodes in this [PixelMap], otherwise
+    ///   clear the dirty status of just the root node.
     #[inline]
-    pub fn clear_dirty(&mut self) {
-        self.root.clear_dirty();
+    pub fn clear_dirty(&mut self, deep: bool) {
+        if deep {
+            self.drain_dirty(|_| {});
+        } else {
+            self.root.clear_dirty();
+        }
     }
 
     ///

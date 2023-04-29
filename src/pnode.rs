@@ -265,22 +265,51 @@ impl<T: Copy + PartialEq, U: Unsigned + NumCast + Copy + Debug> PNode<T, U> {
         }
     }
 
+    pub(super) fn visit_dirty_leaves_in_rect<F>(
+        &self,
+        rect: &IRect,
+        visitor: &mut F,
+        traversed: &mut usize,
+    ) where
+        F: FnMut(&PNode<T, U>, &IRect),
+    {
+        *traversed += 1;
+
+        if !self.dirty() {
+            return;
+        }
+
+        let my_rect: IRect = self.region().into();
+        if let Some(sub_rect) = my_rect.intersection(rect) {
+            match self.children {
+                Some(ref children) => {
+                    for child in children {
+                        child.visit_dirty_leaves_in_rect(rect, visitor, traversed);
+                    }
+                }
+                None => visitor(self, &sub_rect),
+            }
+        }
+    }
+
     pub(super) fn drain_dirty_leaves<F>(&mut self, visitor: &mut F, traversed: &mut usize)
     where
         F: FnMut(&PNode<T, U>),
     {
         *traversed += 1;
 
-        if self.dirty() {
-            self.clear_dirty();
-            match self.children {
-                Some(ref mut children) => {
-                    for child in children {
-                        child.drain_dirty_leaves(visitor, traversed);
-                    }
+        if !self.dirty() {
+            return;
+        }
+
+        self.clear_dirty();
+        match self.children {
+            Some(ref mut children) => {
+                for child in children {
+                    child.drain_dirty_leaves(visitor, traversed);
                 }
-                None => visitor(self),
             }
+            None => visitor(self),
         }
     }
 
