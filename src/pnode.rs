@@ -6,7 +6,7 @@ use glam::IVec2;
 use num_traits::{NumCast, Unsigned};
 use std::fmt::Debug;
 
-pub type Children<T, U> = [Box<PNode<T, U>>; 4];
+pub type Children<T, U> = Box<[PNode<T, U>; 4]>;
 
 /// A node of a [crate::PixelMap] quad tree.
 #[derive(Clone, Debug, PartialEq)]
@@ -93,7 +93,7 @@ impl<T: Copy + PartialEq, U: Unsigned + NumCast + Copy + Debug> PNode<T, U> {
     #[inline]
     pub fn child(&self, quadrant: Quadrant) -> Option<&PNode<T, U>> {
         match &self.children {
-            Some(children) => children.get(quadrant as usize).map(|c| c.as_ref()),
+            Some(children) => children.get(quadrant as usize),
             None => None,
         }
     }
@@ -103,7 +103,7 @@ impl<T: Copy + PartialEq, U: Unsigned + NumCast + Copy + Debug> PNode<T, U> {
     #[inline]
     pub fn child_mut(&mut self, quadrant: Quadrant) -> Option<&mut PNode<T, U>> {
         match &mut self.children {
-            Some(children) => children.get_mut(quadrant as usize).map(|c| c.as_mut()),
+            Some(children) => children.get_mut(quadrant as usize),
             None => None,
         }
     }
@@ -139,7 +139,7 @@ impl<T: Copy + PartialEq, U: Unsigned + NumCast + Copy + Debug> PNode<T, U> {
     {
         visitor(self);
         if let Some(children) = &self.children {
-            for child in children {
+            for child in children.as_ref() {
                 child.visit_nodes(visitor);
             }
         }
@@ -152,7 +152,7 @@ impl<T: Copy + PartialEq, U: Unsigned + NumCast + Copy + Debug> PNode<T, U> {
     {
         visitor(self);
         if let Some(children) = &mut self.children {
-            for child in children {
+            for child in children.as_mut() {
                 child.visit_nodes_mut(visitor);
             }
         }
@@ -165,7 +165,7 @@ impl<T: Copy + PartialEq, U: Unsigned + NumCast + Copy + Debug> PNode<T, U> {
     {
         match self.children {
             Some(ref children) => {
-                for child in children {
+                for child in children.as_ref() {
                     child.visit_nodes(visitor);
                 }
             }
@@ -188,7 +188,7 @@ impl<T: Copy + PartialEq, U: Unsigned + NumCast + Copy + Debug> PNode<T, U> {
         if let Some(sub_rect) = my_rect.intersection(rect) {
             match self.children {
                 Some(ref children) => {
-                    for child in children {
+                    for child in children.as_ref() {
                         child.visit_leaves_in_rect(rect, visitor, traversed);
                     }
                 }
@@ -205,7 +205,7 @@ impl<T: Copy + PartialEq, U: Unsigned + NumCast + Copy + Debug> PNode<T, U> {
         if let Some(sub_rect) = my_rect.intersection(rect) {
             match self.children {
                 Some(ref children) => {
-                    for child in children {
+                    for child in children.as_ref() {
                         if let Some(true) = child.any_leaves_in_rect(rect, f) {
                             return Some(true);
                         }
@@ -230,7 +230,7 @@ impl<T: Copy + PartialEq, U: Unsigned + NumCast + Copy + Debug> PNode<T, U> {
         if let Some(sub_rect) = my_rect.intersection(rect) {
             match self.children {
                 Some(ref children) => {
-                    for child in children {
+                    for child in children.as_ref() {
                         if let Some(false) = child.all_leaves_in_rect(rect, f) {
                             return Some(false);
                         }
@@ -256,7 +256,7 @@ impl<T: Copy + PartialEq, U: Unsigned + NumCast + Copy + Debug> PNode<T, U> {
         if self.dirty() {
             match self.children {
                 Some(ref children) => {
-                    for child in children {
+                    for child in children.as_ref() {
                         child.visit_dirty_leaves(visitor, traversed);
                     }
                 }
@@ -283,7 +283,7 @@ impl<T: Copy + PartialEq, U: Unsigned + NumCast + Copy + Debug> PNode<T, U> {
         if let Some(sub_rect) = my_rect.intersection(rect) {
             match self.children {
                 Some(ref children) => {
-                    for child in children {
+                    for child in children.as_ref() {
                         child.visit_dirty_leaves_in_rect(rect, visitor, traversed);
                     }
                 }
@@ -305,7 +305,7 @@ impl<T: Copy + PartialEq, U: Unsigned + NumCast + Copy + Debug> PNode<T, U> {
         self.clear_dirty();
         match self.children {
             Some(ref mut children) => {
-                for child in children {
+                for child in children.as_mut() {
                     child.drain_dirty_leaves(visitor, traversed);
                 }
             }
@@ -373,6 +373,9 @@ impl<T: Copy + PartialEq, U: Unsigned + NumCast + Copy + Debug> PNode<T, U> {
 
     pub(super) fn set_pixel(&mut self, point: IVec2, pixel_size: u8, value: T) -> bool {
         if self.region.contains(point) {
+            if self.is_leaf() && value == self.value {
+                return true;
+            }
             if self.region.is_unit(pixel_size) {
                 self.set_value(value);
             } else {
@@ -391,6 +394,9 @@ impl<T: Copy + PartialEq, U: Unsigned + NumCast + Copy + Debug> PNode<T, U> {
         if self.contained_by_rect(rect) {
             self.set_value(value);
         } else if let Some(sub_rect) = rect.intersection(&self.region().into()) {
+            if self.is_leaf() && value == self.value {
+                return;
+            }
             if self.region.is_unit(pixel_size) {
                 self.set_value(value);
             } else {
@@ -423,7 +429,7 @@ impl<T: Copy + PartialEq, U: Unsigned + NumCast + Copy + Debug> PNode<T, U> {
     }
 
     #[inline]
-    pub fn contained_by_rect(&self, rect: &IRect) -> bool {
+    fn contained_by_rect(&self, rect: &IRect) -> bool {
         rect.contains(self.region.point()) && rect.contains(self.region.end_point())
     }
 
@@ -436,28 +442,24 @@ impl<T: Copy + PartialEq, U: Unsigned + NumCast + Copy + Debug> PNode<T, U> {
         let y = self.region.y();
         let half_size = self.region.center();
 
-        self.children = Some([
-            Box::new(PNode::new(
-                Region::new(x, y, half_size),
-                self.value,
-                self.dirty,
-            )),
-            Box::new(PNode::new(
+        self.children = Some(Box::new([
+            PNode::new(Region::new(x, y, half_size), self.value, self.dirty),
+            PNode::new(
                 Region::new(x + half_size, y, half_size),
                 self.value,
                 self.dirty,
-            )),
-            Box::new(PNode::new(
+            ),
+            PNode::new(
                 Region::new(x + half_size, y + half_size, half_size),
                 self.value,
                 self.dirty,
-            )),
-            Box::new(PNode::new(
+            ),
+            PNode::new(
                 Region::new(x, y + half_size, half_size),
                 self.value,
                 self.dirty,
-            )),
-        ]);
+            ),
+        ]));
     }
 
     fn decimate(&mut self) {
@@ -466,7 +468,7 @@ impl<T: Copy + PartialEq, U: Unsigned + NumCast + Copy + Debug> PNode<T, U> {
         }
 
         if let Some(children) = &self.children {
-            let mut all_same = false;
+            let mut all_same = true;
             let mut c: Option<T> = None;
 
             for child in children.iter() {
@@ -477,9 +479,9 @@ impl<T: Copy + PartialEq, U: Unsigned + NumCast + Copy + Debug> PNode<T, U> {
                     }
                 } else {
                     c = Some(child.value);
-                    all_same = true;
                 }
             }
+
             if all_same {
                 self.set_value(c.unwrap());
             }
@@ -503,19 +505,19 @@ mod test {
         n.subdivide();
         let children = n.children.unwrap();
         assert_eq!(
-            children[0].as_ref(),
+            &children[0],
             &PNode::new(Region::new(0u32, 0, 2), false, false)
         );
         assert_eq!(
-            children[1].as_ref(),
+            &children[1],
             &PNode::new(Region::new(2u32, 0, 2), false, false)
         );
         assert_eq!(
-            children[2].as_ref(),
+            &children[2],
             &PNode::new(Region::new(2u32, 2, 2), false, false)
         );
         assert_eq!(
-            children[3].as_ref(),
+            &children[3],
             &PNode::new(Region::new(0u32, 2, 2), false, false)
         );
     }

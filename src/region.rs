@@ -59,7 +59,7 @@ impl<U: Unsigned + NumCast + Copy> Region<U> {
     /// Get the center point of the region.
     #[inline]
     pub fn center(&self) -> U {
-        self.size / num_traits::cast::cast(2).unwrap()
+        self.size / U::from(2).unwrap()
     }
 
     /// Determine if this region represents the smallest possible unit or pixel size.

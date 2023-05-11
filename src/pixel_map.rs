@@ -529,7 +529,7 @@ impl<T: Copy + PartialEq, U: Unsigned + NumCast + Copy + Debug> PixelMap<T, U> {
         match self.root.take_children() {
             Some(children) => {
                 let result: [PixelMap<T, U>; 4] = children.map(|c| PixelMap {
-                    root: *c,
+                    root: c,
                     pixel_size: self.pixel_size,
                 });
                 Some(result)
@@ -585,7 +585,7 @@ impl<T: Copy + PartialEq, U: Unsigned + NumCast + Copy + Debug> PixelMap<T, U> {
         assert_eq!(bl.y() + bl.size(), tl.y());
         assert_eq!(br.y() + br.size(), tr.y());
 
-        let children: Children<T, U> = quads.map(|pm| Box::new(pm.root));
+        let children: Children<T, U> = Box::new(quads.map(|pm| pm.root));
         let root = PNode::with_children(children, dirty);
 
         Self {
