@@ -21,6 +21,7 @@ pub struct RayCastResult {
 }
 
 impl RayCastResult {
+    #[inline]
     pub fn is_hit(&self) -> bool {
         self.collision_point.is_some()
     }

@@ -448,7 +448,7 @@ impl<T: Copy + PartialEq, U: Unsigned + NumCast + Copy + Debug> PixelMap<T, U> {
     }
 
     /// Combine another [PixelMap] with this one using a function that decides how to combine
-    /// the colors of each pixel. This [PixelMap]'s region should overlap with the other [PixelMap]'s region,
+    /// the values of each pixel. This [PixelMap]'s region should overlap with the other [PixelMap]'s region,
     /// otherwise this operation has no effect.
     ///
     /// # Parameters

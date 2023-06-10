@@ -338,12 +338,30 @@ impl ops::Add<IVec2> for IRect {
     }
 }
 
+impl ops::Add<IVec2> for &IRect {
+    type Output = IRect;
+
+    #[inline]
+    fn add(self, rhs: IVec2) -> Self::Output {
+        IRect::from_corners(self.min + rhs, self.max + rhs)
+    }
+}
+
 impl ops::Sub<IVec2> for IRect {
     type Output = Self;
 
     #[inline]
     fn sub(self, rhs: IVec2) -> Self::Output {
         Self::from_corners(self.min - rhs, self.max - rhs)
+    }
+}
+
+impl ops::Sub<IVec2> for &IRect {
+    type Output = IRect;
+
+    #[inline]
+    fn sub(self, rhs: IVec2) -> Self::Output {
+        IRect::from_corners(self.min - rhs, self.max - rhs)
     }
 }
 

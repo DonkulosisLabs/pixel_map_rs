@@ -123,7 +123,7 @@ impl ILine {
         }
     }
 
-    /// Get the diagonal axis-aligned direction of this line, if it is diagonal axis-aligned, `None` otherwise.
+    /// Get the diagonal axis-aligned direction of this line, if it is diagonally axis-aligned, `None` otherwise.
     #[inline]
     pub fn diagonal_axis_alignment(&self) -> Option<Direction> {
         let dx = self.end.x - self.start.x;
