@@ -85,6 +85,34 @@ impl<T: Copy + PartialEq, U: Unsigned + NumCast + Copy + Debug> PixelMap<T, U> {
         }
     }
 
+    /// Get the value of the pixel at the given coordinates, along with the path of node regions
+    /// that stores the pixel.
+    ///
+    /// # Parameters
+    ///
+    /// - `point`: The coordinates of the pixel for which to retrieve the associated value and node region path.
+    ///
+    /// # Returns
+    ///
+    /// If the coordinates are outside the region covered by this [PixelMap], `None` is returned.
+    /// Otherwise, a tuple is returned containing the node region path and the pixel value. The node
+    /// region path is a vector of node regions, starting with the root node region and ending with
+    /// the node region that contains the pixel.
+    #[inline]
+    pub fn get_pixel_path<P>(&self, point: P) -> Option<(Vec<Region<U>>, T)>
+    where
+        P: Into<IVec2>,
+    {
+        let point = point.into();
+        if self.root.region().contains(point) {
+            let mut stack = Vec::with_capacity(16); // TODO: smarter
+            let value = self.root.find_node_path(point, &mut stack, &mut 0).unwrap();
+            Some((stack, value))
+        } else {
+            None
+        }
+    }
+
     /// Set the value of the pixel at the given coordinates.
     ///
     /// # Parameters

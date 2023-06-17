@@ -325,6 +325,26 @@ impl<T: Copy + PartialEq, U: Unsigned + NumCast + Copy + Debug> PNode<T, U> {
         }
     }
 
+    // Get the node that contains the given coordinates. The coordinates must be
+    // known to be within the bounds of this node. Collect the path of nodes
+    // traversed to get to the node.
+    pub(super) fn find_node_path(
+        &self,
+        point: IVec2,
+        stack: &mut Vec<Region<U>>,
+        traversed: &mut usize,
+    ) -> Option<T> {
+        *traversed += 1;
+        stack.push(self.region.clone());
+
+        if let Some(children) = &self.children {
+            let q = self.region.quadrant_for(point);
+            children[q as usize].find_node_path(point, stack, traversed)
+        } else {
+            None
+        }
+    }
+
     pub(super) fn ray_cast<F>(
         &self,
         query: &RayCastQuery,
@@ -370,6 +390,15 @@ impl<T: Copy + PartialEq, U: Unsigned + NumCast + Copy + Debug> PNode<T, U> {
             }
         }
     }
+
+    /*    pub(super) fn nearest_neighbor<F>(&self, direction: &Direction, predicate: &mut F)
+        where
+            F: FnMut(&PNode<T, U>) -> bool,
+        {
+            let stack = Vec::with_capacity(64);
+        }
+    */
+    //fn common_ancestor(stack: Vec<>)
 
     pub(super) fn set_pixel(&mut self, point: IVec2, pixel_size: u8, value: T) -> bool {
         if self.region.contains(point) {
@@ -550,6 +579,36 @@ mod test {
         assert!(!n.find_node((1, 0).into(), &mut 0).value());
         assert!(!n.find_node((0, 1).into(), &mut 0).value());
         assert!(!n.find_node((1, 1).into(), &mut 0).value());
+    }
+
+    #[test]
+    fn test_find_node_path() {
+        let mut n = PNode::new(Region::new(0u32, 0, 4), false, false);
+        n.subdivide();
+        n.children.as_mut().unwrap()[0].subdivide();
+        n.children.as_mut().unwrap()[0].children.as_mut().unwrap()[0].value = true;
+
+        let mut stack = Vec::new();
+
+        n.find_node_path((0, 0).into(), &mut stack, &mut 0);
+        assert_eq!(stack.len(), 3);
+        assert_eq!(stack.get(0).unwrap(), &Region::new(0u32, 0, 4));
+        assert_eq!(stack.get(1).unwrap(), &Region::new(0u32, 0, 2));
+        assert_eq!(stack.get(2).unwrap(), &Region::new(0u32, 0, 1));
+        stack.clear();
+
+        n.find_node_path((1, 1).into(), &mut stack, &mut 0);
+        assert_eq!(stack.len(), 3);
+        assert_eq!(stack.get(0).unwrap(), &Region::new(0u32, 0, 4));
+        assert_eq!(stack.get(1).unwrap(), &Region::new(0u32, 0, 2));
+        assert_eq!(stack.get(2).unwrap(), &Region::new(1u32, 1, 1));
+        stack.clear();
+
+        n.find_node_path((3, 3).into(), &mut stack, &mut 0);
+        assert_eq!(stack.len(), 2);
+        assert_eq!(stack.get(0).unwrap(), &Region::new(0u32, 0, 4));
+        assert_eq!(stack.get(1).unwrap(), &Region::new(2u32, 2, 2));
+        stack.clear();
     }
 
     #[test]
