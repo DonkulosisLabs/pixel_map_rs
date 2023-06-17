@@ -79,7 +79,7 @@ impl<T: Copy + PartialEq, U: Unsigned + NumCast + Copy + Debug> PixelMap<T, U> {
     {
         let point = point.into();
         if self.root.region().contains(point) {
-            Some(self.root.find_node(point, &mut 0).value())
+            Some(self.root.find_node(point).value())
         } else {
             None
         }
@@ -106,7 +106,7 @@ impl<T: Copy + PartialEq, U: Unsigned + NumCast + Copy + Debug> PixelMap<T, U> {
         let point = point.into();
         if self.root.region().contains(point) {
             let mut stack = Vec::with_capacity(16); // TODO: smarter
-            let value = self.root.find_node_path(point, &mut stack, &mut 0).unwrap();
+            let value = self.root.find_path(point, &mut stack);
             Some((stack, value))
         } else {
             None

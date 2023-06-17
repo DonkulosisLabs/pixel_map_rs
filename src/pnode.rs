@@ -315,34 +315,35 @@ impl<T: Copy + PartialEq, U: Unsigned + NumCast + Copy + Debug> PNode<T, U> {
 
     // Get the node that contains the given coordinates. The coordinates must be
     // known to be within the bounds of this node.
-    pub(super) fn find_node(&self, point: IVec2, traversed: &mut usize) -> &PNode<T, U> {
-        *traversed += 1;
-        if let Some(children) = &self.children {
-            let q = self.region.quadrant_for(point);
-            children[q as usize].find_node(point, traversed)
-        } else {
-            self
+    #[inline]
+    pub(super) fn find_node(&self, point: IVec2) -> &PNode<T, U> {
+        let mut node = self;
+        loop {
+            if let Some(children) = &node.children {
+                let q = node.region.quadrant_for(point);
+                node = &children[q as usize];
+            } else {
+                return node;
+            }
         }
     }
 
-    // Get the node that contains the given coordinates. The coordinates must be
+    // Get the node value at the given coordinates. The coordinates must be
     // known to be within the bounds of this node. Collect the path of nodes
     // traversed to get to the node.
-    pub(super) fn find_node_path(
-        &self,
-        point: IVec2,
-        stack: &mut Vec<Region<U>>,
-        traversed: &mut usize,
-    ) -> Option<T> {
-        *traversed += 1;
-        stack.push(self.region.clone());
-
-        if let Some(children) = &self.children {
-            let q = self.region.quadrant_for(point);
-            children[q as usize].find_node_path(point, stack, traversed)
-        } else {
-            None
+    #[inline]
+    pub(super) fn find_path(&self, point: IVec2, stack: &mut Vec<Region<U>>) -> T {
+        let mut node = self;
+        loop {
+            stack.push(node.region.clone());
+            if let Some(children) = &node.children {
+                let q = node.region.quadrant_for(point);
+                node = &children[q as usize];
+            } else {
+                break;
+            }
         }
+        node.value()
     }
 
     pub(super) fn ray_cast<F>(
@@ -575,14 +576,14 @@ mod test {
         let mut n = PNode::new(Region::new(0u32, 0, 2), false, false);
         n.subdivide();
         n.children.as_mut().unwrap()[0].value = true;
-        assert!(n.find_node((0, 0).into(), &mut 0).value());
-        assert!(!n.find_node((1, 0).into(), &mut 0).value());
-        assert!(!n.find_node((0, 1).into(), &mut 0).value());
-        assert!(!n.find_node((1, 1).into(), &mut 0).value());
+        assert!(n.find_node((0, 0).into()).value());
+        assert!(!n.find_node((1, 0).into()).value());
+        assert!(!n.find_node((0, 1).into()).value());
+        assert!(!n.find_node((1, 1).into()).value());
     }
 
     #[test]
-    fn test_find_node_path() {
+    fn test_find_path() {
         let mut n = PNode::new(Region::new(0u32, 0, 4), false, false);
         n.subdivide();
         n.children.as_mut().unwrap()[0].subdivide();
@@ -590,21 +591,21 @@ mod test {
 
         let mut stack = Vec::new();
 
-        n.find_node_path((0, 0).into(), &mut stack, &mut 0);
+        n.find_path((0, 0).into(), &mut stack);
         assert_eq!(stack.len(), 3);
         assert_eq!(stack.get(0).unwrap(), &Region::new(0u32, 0, 4));
         assert_eq!(stack.get(1).unwrap(), &Region::new(0u32, 0, 2));
         assert_eq!(stack.get(2).unwrap(), &Region::new(0u32, 0, 1));
         stack.clear();
 
-        n.find_node_path((1, 1).into(), &mut stack, &mut 0);
+        n.find_path((1, 1).into(), &mut stack);
         assert_eq!(stack.len(), 3);
         assert_eq!(stack.get(0).unwrap(), &Region::new(0u32, 0, 4));
         assert_eq!(stack.get(1).unwrap(), &Region::new(0u32, 0, 2));
         assert_eq!(stack.get(2).unwrap(), &Region::new(1u32, 1, 1));
         stack.clear();
 
-        n.find_node_path((3, 3).into(), &mut stack, &mut 0);
+        n.find_path((3, 3).into(), &mut stack);
         assert_eq!(stack.len(), 2);
         assert_eq!(stack.get(0).unwrap(), &Region::new(0u32, 0, 4));
         assert_eq!(stack.get(1).unwrap(), &Region::new(2u32, 2, 2));
@@ -617,10 +618,10 @@ mod test {
         n.set_pixel((0, 0).into(), 1, true);
         assert!(!n.value);
         assert!(n.children.is_some());
-        assert!(n.find_node((0, 0).into(), &mut 0).value());
-        assert!(!n.find_node((1, 0).into(), &mut 0).value());
-        assert!(!n.find_node((0, 1).into(), &mut 0).value());
-        assert!(!n.find_node((1, 1).into(), &mut 0).value());
+        assert!(n.find_node((0, 0).into()).value());
+        assert!(!n.find_node((1, 0).into()).value());
+        assert!(!n.find_node((0, 1).into()).value());
+        assert!(!n.find_node((1, 1).into()).value());
     }
 
     #[test]
