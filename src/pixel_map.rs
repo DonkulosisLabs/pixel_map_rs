@@ -1,7 +1,7 @@
 use super::{
     Children, ICircle, IRect, PNode, RayCast, RayCastContext, RayCastQuery, RayCastResult, Region,
 };
-use crate::{ILine, Quadrant, Shape};
+use crate::{ILine, NodePath, Quadrant, Shape};
 use glam::IVec2;
 use num_traits::{NumCast, Unsigned};
 use std::fmt::{Debug, Formatter};
@@ -85,29 +85,24 @@ impl<T: Copy + PartialEq, U: Unsigned + NumCast + Copy + Debug> PixelMap<T, U> {
         }
     }
 
-    /// Get the value of the pixel at the given coordinates, along with the path of node regions
-    /// that stores the pixel.
+    /// Get the path to the node that stores the pixel at the given point.
     ///
     /// # Parameters
     ///
-    /// - `point`: The coordinates of the pixel for which to retrieve the associated value and node region path.
+    /// - `point`: The coordinates of the pixel for which to retrieve the node path.
     ///
     /// # Returns
     ///
     /// If the coordinates are outside the region covered by this [PixelMap], `None` is returned.
-    /// Otherwise, a tuple is returned containing the node region path and the pixel value. The node
-    /// region path is a vector of node regions, starting with the root node region and ending with
-    /// the node region that contains the pixel.
     #[inline]
-    pub fn get_pixel_path<P>(&self, point: P) -> Option<(Vec<Region<U>>, T)>
+    pub fn get_path<P>(&self, point: P) -> Option<NodePath>
     where
         P: Into<IVec2>,
     {
         let point = point.into();
         if self.root.region().contains(point) {
-            let mut stack = Vec::with_capacity(16); // TODO: smarter
-            let value = self.root.find_path(point, &mut stack);
-            Some((stack, value))
+            let path = self.root.node_path(point);
+            Some(path)
         } else {
             None
         }
