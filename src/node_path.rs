@@ -12,40 +12,47 @@ impl NodePath {
     pub const ROOT: NodePath = NodePath(0);
 
     #[inline]
+    #[must_use]
     pub fn from_quadrants(quadrants: &[Quadrant]) -> NodePath {
         let mut path = Self::ROOT;
         for &quadrant in quadrants {
-            path.append(quadrant);
+            path = path.append(quadrant);
         }
         path
     }
 
     #[inline]
+    #[must_use]
     pub fn is_root(&self) -> bool {
         *self == Self::ROOT
     }
 
     #[inline]
+    #[must_use]
     pub fn encode(depth: u16, path: u64) -> NodePath {
         NodePath(((depth as u64) << Self::DEPTH) | (path & Self::MASK))
     }
 
     #[inline]
+    #[must_use]
     pub fn depth(&self) -> u16 {
         (self.0 >> Self::DEPTH) as u16
     }
 
     #[inline]
+    #[must_use]
     pub fn path_bits(&self) -> u64 {
         self.0 & Self::MASK
     }
 
     #[inline]
+    #[must_use]
     pub fn components(&self) -> (u16, u64) {
         (self.depth(), self.path_bits())
     }
 
     #[inline]
+    #[must_use]
     pub fn quadrant_at(&self, index: u16) -> Option<Quadrant> {
         let self_depth = self.depth();
         if index >= self_depth {
@@ -58,6 +65,7 @@ impl NodePath {
     }
 
     #[inline]
+    #[must_use]
     pub fn tail(&self) -> Option<Quadrant> {
         if *self == Self::ROOT {
             return None;
@@ -66,19 +74,22 @@ impl NodePath {
     }
 
     #[inline]
-    pub fn append(&mut self, quadrant: Quadrant) {
+    #[must_use]
+    pub fn append(&self, quadrant: Quadrant) -> NodePath {
         let (depth, path) = self.components();
         let new_depth = depth + 1;
         let new_path = path | ((quadrant as u64) << (2 * depth));
-        *self = Self::encode(new_depth, new_path);
+        Self::encode(new_depth, new_path)
     }
 
     #[inline]
+    #[must_use]
     pub fn parent(&self) -> NodePath {
         self.truncate(1)
     }
 
     #[inline]
+    #[must_use]
     pub fn truncate(&self, count: u16) -> NodePath {
         // Special case: count is zero
         if count == 0 {
@@ -102,6 +113,7 @@ impl NodePath {
         node
     }
 
+    #[must_use]
     pub fn common_ancestor(&self, b: NodePath) -> NodePath {
         let a = *self;
 
@@ -229,14 +241,13 @@ mod test {
 
     #[test]
     fn test_append() {
-        let mut path = NodePath::ROOT;
-        path.append(Quadrant::TopLeft);
+        let path = NodePath::ROOT.append(Quadrant::TopLeft);
         assert_eq!(path, NodePath::encode(1, 0b11));
 
-        let mut path = NodePath::encode(4, 0b00_11_10_01);
-        path.append(Quadrant::TopLeft);
+        let path = NodePath::encode(4, 0b00_11_10_01);
+        let path = path.append(Quadrant::TopLeft);
         assert_eq!(path, NodePath::encode(5, 0b11_00_11_10_01));
-        path.append(Quadrant::BottomRight);
+        let path = path.append(Quadrant::BottomRight);
         assert_eq!(path, NodePath::encode(6, 0b01_11_00_11_10_01));
     }
 

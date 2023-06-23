@@ -19,6 +19,7 @@ pub struct PNode<T: Copy + PartialEq = bool, U: Unsigned + NumCast + Copy + Debu
 
 impl<T: Copy + PartialEq, U: Unsigned + NumCast + Copy + Debug> PNode<T, U> {
     #[inline]
+    #[must_use]
     pub(super) fn new(region: Region<U>, value: T, dirty: bool) -> Self {
         Self {
             region,
@@ -29,6 +30,7 @@ impl<T: Copy + PartialEq, U: Unsigned + NumCast + Copy + Debug> PNode<T, U> {
     }
 
     #[inline]
+    #[must_use]
     pub(super) fn with_children(children: Children<T, U>, dirty: bool) -> Self {
         let mut rect: IRect = children[0].region().into();
         for child in &children[1..] {
@@ -51,6 +53,7 @@ impl<T: Copy + PartialEq, U: Unsigned + NumCast + Copy + Debug> PNode<T, U> {
 
     /// Obtain the region represented by this node.
     #[inline]
+    #[must_use]
     pub fn region(&self) -> &Region<U> {
         &self.region
     }
@@ -58,6 +61,7 @@ impl<T: Copy + PartialEq, U: Unsigned + NumCast + Copy + Debug> PNode<T, U> {
     /// Determine if this node is in a dirty state. This can be used to represent a
     /// modified node that needs to be manipulated in some way (i.e. written to an Image texture).
     #[inline]
+    #[must_use]
     pub fn dirty(&self) -> bool {
         self.dirty
     }
@@ -70,6 +74,7 @@ impl<T: Copy + PartialEq, U: Unsigned + NumCast + Copy + Debug> PNode<T, U> {
 
     /// Obtain this node's value.
     #[inline]
+    #[must_use]
     pub fn value(&self) -> T {
         self.value
     }
@@ -85,12 +90,14 @@ impl<T: Copy + PartialEq, U: Unsigned + NumCast + Copy + Debug> PNode<T, U> {
 
     /// Obtain an array of the children of this node. If this node has no children, None is returned.
     #[inline]
+    #[must_use]
     pub fn children(&self) -> Option<&Children<T, U>> {
         self.children.as_ref()
     }
 
     /// Get the child node in the given quadrant. If this node has no children, `None` is returned.
     #[inline]
+    #[must_use]
     pub fn child(&self, quadrant: Quadrant) -> Option<&PNode<T, U>> {
         match &self.children {
             Some(children) => children.get(quadrant as usize),
@@ -101,6 +108,7 @@ impl<T: Copy + PartialEq, U: Unsigned + NumCast + Copy + Debug> PNode<T, U> {
     /// Get a mutable reference to the child node in the given quadrant. If this node has no children,
     /// `None` is returned.
     #[inline]
+    #[must_use]
     pub fn child_mut(&mut self, quadrant: Quadrant) -> Option<&mut PNode<T, U>> {
         match &mut self.children {
             Some(children) => children.get_mut(quadrant as usize),
@@ -111,6 +119,7 @@ impl<T: Copy + PartialEq, U: Unsigned + NumCast + Copy + Debug> PNode<T, U> {
     // Take the children of this node, making it a leaf node, having a value of whatever
     // was in effect at the time it was subdivided into child nodes. This marks the node as dirty.
     #[inline]
+    #[must_use]
     pub(super) fn take_children(&mut self) -> Option<Children<T, U>> {
         self.dirty = true;
         self.children.take()
@@ -118,12 +127,14 @@ impl<T: Copy + PartialEq, U: Unsigned + NumCast + Copy + Debug> PNode<T, U> {
 
     /// Determine if this node is a leaf node. Leaves don't have children.
     #[inline]
+    #[must_use]
     pub fn is_leaf(&self) -> bool {
         self.children.is_none()
     }
 
     /// Determine if all immediate children of this node are leaf nodes.
     #[inline]
+    #[must_use]
     pub fn is_leaf_parent(&self) -> bool {
         if let Some(children) = &self.children {
             children.iter().all(|c| c.is_leaf())
@@ -316,6 +327,7 @@ impl<T: Copy + PartialEq, U: Unsigned + NumCast + Copy + Debug> PNode<T, U> {
     // Get the node that contains the given coordinates. The coordinates must be
     // known to be within the bounds of this node.
     #[inline]
+    #[must_use]
     pub(super) fn find_node(&self, point: IVec2) -> &PNode<T, U> {
         let mut node = self;
         loop {
@@ -329,6 +341,7 @@ impl<T: Copy + PartialEq, U: Unsigned + NumCast + Copy + Debug> PNode<T, U> {
     }
 
     #[inline]
+    #[must_use]
     pub(super) fn node_path(&self, point: IVec2) -> NodePath {
         let mut depth = 0;
         let mut node = self;
@@ -347,6 +360,7 @@ impl<T: Copy + PartialEq, U: Unsigned + NumCast + Copy + Debug> PNode<T, U> {
     }
 
     #[inline]
+    #[must_use]
     pub(super) fn find_node_by_path(&self, path: NodePath) -> Option<&PNode<T, U>> {
         let mut path_depth = path.depth() as u64;
         if path_depth == 0 {
@@ -370,6 +384,7 @@ impl<T: Copy + PartialEq, U: Unsigned + NumCast + Copy + Debug> PNode<T, U> {
         }
     }
 
+    #[must_use]
     pub(super) fn ray_cast<F>(
         &self,
         query: &RayCastQuery,
@@ -474,6 +489,7 @@ impl<T: Copy + PartialEq, U: Unsigned + NumCast + Copy + Debug> PNode<T, U> {
     }
 
     #[inline]
+    #[must_use]
     fn contained_by_rect(&self, rect: &IRect) -> bool {
         rect.contains(self.region.point()) && rect.contains(self.region.end_point())
     }

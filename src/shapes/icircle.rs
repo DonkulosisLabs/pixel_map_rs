@@ -16,6 +16,7 @@ impl ICircle {
 
     /// Creates a new circle with the given center point and radius.
     #[inline]
+    #[must_use]
     pub fn new<P>(point: P, radius: u32) -> Self
     where
         P: Into<IVec2>,
@@ -28,30 +29,35 @@ impl ICircle {
 
     /// Get the center point `x` component.
     #[inline]
+    #[must_use]
     pub fn x(&self) -> i32 {
         self.point.x
     }
 
     /// Get the center point `y` component.
     #[inline]
+    #[must_use]
     pub fn y(&self) -> i32 {
         self.point.y
     }
 
     /// Get the center point.
     #[inline]
+    #[must_use]
     pub fn point(&self) -> IVec2 {
         self.point
     }
 
     /// Get the radius.
     #[inline]
+    #[must_use]
     pub fn radius(&self) -> u32 {
         self.radius
     }
 
     /// Determine if the circle contains the given point.
     #[inline]
+    #[must_use]
     pub fn contains<P>(&self, point: P) -> bool
     where
         P: Into<IVec2>,
@@ -62,6 +68,7 @@ impl ICircle {
 
     /// Get the axis-aligned bounding box of the circle.
     #[inline]
+    #[must_use]
     pub fn aabb(&self) -> IRect {
         let size = self.radius * 2;
         IRect::centered_at(self.point, size, size)
@@ -69,6 +76,7 @@ impl ICircle {
 
     /// Get the axis-aligned largest rectangle contained within the circle.
     #[inline]
+    #[must_use]
     pub fn inner_rect(&self) -> IRect {
         let size = (self.radius as f32 * 2f32.sqrt()) as u32;
         IRect::centered_at(self.point, size, size)
@@ -76,6 +84,7 @@ impl ICircle {
 
     /// Iterator over pixels in the circle.
     #[inline]
+    #[must_use]
     pub fn pixels(&self) -> CirclePixelIterator {
         CirclePixelIterator::new(self.clone())
     }
@@ -107,6 +116,7 @@ pub struct CirclePixelIterator {
 
 impl CirclePixelIterator {
     #[inline]
+    #[must_use]
     pub fn new(circle: ICircle) -> Self {
         let y = -(circle.radius as i32);
         let r = circle.radius as i32;

@@ -19,6 +19,7 @@ impl ILine {
 
     /// Creates a new line with the given start and end points.
     #[inline]
+    #[must_use]
     pub fn new<P>(start: P, end: P) -> Self
     where
         P: Into<IVec2>,
@@ -31,36 +32,42 @@ impl ILine {
 
     /// Get the start point.
     #[inline]
+    #[must_use]
     pub fn start(&self) -> IVec2 {
         self.start
     }
 
     /// Get the end point.
     #[inline]
+    #[must_use]
     pub fn end(&self) -> IVec2 {
         self.end
     }
 
     /// Get the line's length squared.
     #[inline]
+    #[must_use]
     pub fn length_squared(&self) -> f32 {
         distance_squared_to(self.start, self.end)
     }
 
     /// Get the line's length.
     #[inline]
+    #[must_use]
     pub fn length(&self) -> f32 {
         distance_to(self.start, self.end)
     }
 
     /// Create a new line that is the rotation of this line around its start point, by the given radians.
     #[inline]
+    #[must_use]
     pub fn rotate(&self, radians: f32) -> Self {
         self.rotate_around(self.start, radians)
     }
 
     /// Create a new line that is the rotation of this line around the given point, by the given radians.
     #[inline]
+    #[must_use]
     pub fn rotate_around(&self, center: IVec2, radians: f32) -> Self {
         let cos_theta = f32::cos(radians);
         let sin_theta = f32::sin(radians);
@@ -82,6 +89,7 @@ impl ILine {
 
     /// Determine if the given point lies on this line.
     #[inline]
+    #[must_use]
     pub fn contains<P>(&self, point: P) -> bool
     where
         P: Into<IVec2>,
@@ -93,18 +101,21 @@ impl ILine {
 
     /// Determine if this line is axis-aligned.
     #[inline]
+    #[must_use]
     pub fn is_axis_aligned(&self) -> bool {
         self.start.x == self.end.x || self.start.y == self.end.y
     }
 
     /// Get the axis-aligned bounding box of this line.
     #[inline]
+    #[must_use]
     pub fn aabb(&self) -> IRect {
         IRect::from_corners(self.start, self.end)
     }
 
     /// Get the axis-aligned direction of this line, if it is axis-aligned, `None` otherwise.
     #[inline]
+    #[must_use]
     pub fn axis_alignment(&self) -> Option<Direction> {
         if self.start.x == self.end.x {
             if self.start.y < self.end.y {
@@ -125,6 +136,7 @@ impl ILine {
 
     /// Get the diagonal axis-aligned direction of this line, if it is diagonally axis-aligned, `None` otherwise.
     #[inline]
+    #[must_use]
     pub fn diagonal_axis_alignment(&self) -> Option<Direction> {
         let dx = self.end.x - self.start.x;
         let dy = self.end.y - self.start.y;
@@ -147,6 +159,7 @@ impl ILine {
 
     /// Determine if this line intersects the given line.
     #[inline]
+    #[must_use]
     pub fn intersects_line(&self, other: &ILine) -> Option<IVec2> {
         let seg1 = LineInterval::line_segment(*self);
         let seg2 = LineInterval::line_segment(*other);
@@ -155,6 +168,7 @@ impl ILine {
 
     /// Determine if this line intersects the given rectangle.
     #[inline]
+    #[must_use]
     pub fn intersects_rect(&self, rect: &IRect) -> bool {
         for seg in rect.segments() {
             if self.intersects_line(&seg).is_some() {
@@ -174,6 +188,7 @@ impl ILine {
     }
 
     #[inline]
+    #[must_use]
     pub fn pixels(&self) -> LinePixelIterator {
         LinePixelIterator::new(self)
     }

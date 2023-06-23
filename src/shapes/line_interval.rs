@@ -35,6 +35,7 @@ pub struct LineInterval {
 
 impl LineInterval {
     #[inline]
+    #[must_use]
     pub fn line_segment(line: ILine) -> LineInterval {
         LineInterval {
             line,
@@ -43,6 +44,7 @@ impl LineInterval {
     }
 
     #[inline]
+    #[must_use]
     pub fn ray(line: ILine) -> LineInterval {
         LineInterval {
             line,
@@ -51,6 +53,7 @@ impl LineInterval {
     }
 
     #[inline]
+    #[must_use]
     pub fn line(line: ILine) -> LineInterval {
         LineInterval {
             line,
@@ -59,6 +62,7 @@ impl LineInterval {
     }
 
     /// Get the relationship between this line segment and another.
+    #[must_use]
     pub fn relate(&self, other: &LineInterval) -> LineRelation {
         // see https://stackoverflow.com/a/565282
         let p = self.line.start();
@@ -102,16 +106,19 @@ impl LineInterval {
     }
 
     #[inline]
+    #[must_use]
     fn cross(a: &IVec2, b: (f32, f32)) -> f32 {
         a.x as f32 * b.1 - a.y as f32 * b.0
     }
 
     #[inline]
+    #[must_use]
     fn div(a: &IVec2, b: f32) -> (f32, f32) {
         (a.x as f32 / b, a.y as f32 / b)
     }
 
     #[inline]
+    #[must_use]
     fn t_coord_to_point(p: IVec2, r: IVec2, t: f32) -> IVec2 {
         (p.x + (t * r.x as f32) as i32, p.y + (t * r.y as f32) as i32).into()
     }
@@ -134,6 +141,7 @@ pub enum LineRelation {
 
 impl LineRelation {
     #[inline]
+    #[must_use]
     pub fn unique_intersection(self) -> Option<IVec2> {
         match self {
             LineRelation::DivergentIntersecting(p) => Some(p),

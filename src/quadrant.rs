@@ -12,6 +12,7 @@ pub enum Quadrant {
 impl Quadrant {
     /// Returns the quadrant for the given point in relation to the given center point.
     #[inline]
+    #[must_use]
     pub fn for_point<P>(point: P, center: i32) -> Quadrant
     where
         P: Into<IVec2>,
@@ -31,6 +32,7 @@ impl Quadrant {
     }
 
     #[inline]
+    #[must_use]
     pub fn from_value(value: u8) -> Option<Quadrant> {
         match value {
             0 => Some(Quadrant::BottomLeft),

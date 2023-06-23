@@ -8,6 +8,8 @@ pub struct RayCastQuery {
 }
 
 impl RayCastQuery {
+    #[inline]
+    #[must_use]
     pub fn new(line: ILine) -> Self {
         Self { line }
     }
@@ -22,6 +24,7 @@ pub struct RayCastResult {
 
 impl RayCastResult {
     #[inline]
+    #[must_use]
     pub fn is_hit(&self) -> bool {
         self.collision_point.is_some()
     }

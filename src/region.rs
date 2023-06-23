@@ -13,24 +13,28 @@ pub struct Region<U: Unsigned + Copy = u16> {
 impl<U: Unsigned + NumCast + Copy> Region<U> {
     /// Create a new region with the given bottom-left point coordinates and size.
     #[inline]
+    #[must_use]
     pub fn new(x: U, y: U, size: U) -> Self {
         Self { x, y, size }
     }
 
     /// Get the `x` component of the bottom-left point.
     #[inline]
+    #[must_use]
     pub fn x(&self) -> U {
         self.x
     }
 
     /// Get the `y` component of the bottom-left point.
     #[inline]
+    #[must_use]
     pub fn y(&self) -> U {
         self.y
     }
 
     /// Get the bottom-left point.
     #[inline]
+    #[must_use]
     pub fn point(&self) -> IVec2 {
         let x = num_traits::cast::cast(self.x).unwrap();
         let y = num_traits::cast::cast(self.y).unwrap();
@@ -39,6 +43,7 @@ impl<U: Unsigned + NumCast + Copy> Region<U> {
 
     /// Get the top-right point.
     #[inline]
+    #[must_use]
     pub fn end_point(&self) -> IVec2 {
         let size: i32 = num_traits::cast::cast(self.size).unwrap();
         self.point() + size - 1
@@ -46,30 +51,35 @@ impl<U: Unsigned + NumCast + Copy> Region<U> {
 
     /// Get the size of the region.
     #[inline]
+    #[must_use]
     pub fn size(&self) -> U {
         self.size
     }
 
     /// Get the size of the region as a `usize`.
     #[inline]
+    #[must_use]
     pub fn size_as_usize(&self) -> usize {
         num_traits::cast::cast(self.size).unwrap()
     }
 
     /// Get the center point of the region.
     #[inline]
+    #[must_use]
     pub fn center(&self) -> U {
         self.size / U::from(2).unwrap()
     }
 
     /// Determine if this region represents the smallest possible unit or pixel size.
     #[inline]
+    #[must_use]
     pub fn is_unit(&self, pixel_size: u8) -> bool {
         self.size == num_traits::cast(pixel_size).unwrap()
     }
 
     /// Determine if the given point is contained within this region.
     #[inline]
+    #[must_use]
     pub fn contains<P>(&self, point: P) -> bool
     where
         P: Into<IVec2>,
@@ -92,6 +102,7 @@ impl<U: Unsigned + NumCast + Copy> Region<U> {
 
     /// Obtain the quadrant for the given point in relation to the center of this region.
     #[inline]
+    #[must_use]
     pub fn quadrant_for<P>(&self, point: P) -> Quadrant
     where
         P: Into<IVec2>,

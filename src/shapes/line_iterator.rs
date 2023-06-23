@@ -48,6 +48,7 @@ pub enum LinePixelIterator {
 
 impl LinePixelIterator {
     #[inline]
+    #[must_use]
     pub fn new(line: &ILine) -> Self {
         match AxisLineIterator::new(line) {
             Some(iter) => LinePixelIterator::Axis(iter),
@@ -56,6 +57,7 @@ impl LinePixelIterator {
     }
 
     #[inline]
+    #[must_use]
     pub fn peek(&self) -> Option<IVec2> {
         match self {
             LinePixelIterator::Axis(iter) => iter.peek(),
@@ -98,6 +100,7 @@ pub struct AxisLineIterator {
 
 impl AxisLineIterator {
     #[inline]
+    #[must_use]
     pub fn new(line: &ILine) -> Option<Self> {
         let direction = line.axis_alignment().or(line.diagonal_axis_alignment())?;
         Some(Self {
@@ -109,6 +112,7 @@ impl AxisLineIterator {
     }
 
     #[inline]
+    #[must_use]
     pub fn peek(&self) -> Option<IVec2> {
         if self.finished {
             return None;
@@ -189,6 +193,7 @@ pub struct AngleLineIterator {
 
 impl AngleLineIterator {
     #[inline]
+    #[must_use]
     pub fn new(line: &ILine) -> Self {
         let x0 = line.start().x;
         let y0 = line.start().y;
@@ -210,6 +215,7 @@ impl AngleLineIterator {
     }
 
     #[inline]
+    #[must_use]
     pub fn peek(&self) -> Option<IVec2> {
         if self.finished {
             return None;

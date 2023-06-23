@@ -11,6 +11,7 @@ pub enum Shape {
 
 impl Shape {
     #[inline]
+    #[must_use]
     pub fn aabb(&self) -> IRect {
         match self {
             Shape::Point { point } => IRect::from_corners(*point, *point),
@@ -21,6 +22,7 @@ impl Shape {
     }
 
     #[inline]
+    #[must_use]
     pub fn pixels(&self) -> ShapePixelIterator {
         match self {
             Shape::Point { point } => ShapePixelIterator::Point {

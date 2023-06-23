@@ -34,6 +34,7 @@ impl<T: Copy + PartialEq, U: Unsigned + NumCast + Copy + Debug> PixelMap<T, U> {
     ///
     /// If `pixel_size` is not a power of two.
     #[inline]
+    #[must_use]
     pub fn new(region: Region<U>, value: T, pixel_size: u8) -> Self {
         assert!(region.size_as_usize().is_power_of_two());
         assert!(pixel_size.is_power_of_two());
@@ -46,12 +47,14 @@ impl<T: Copy + PartialEq, U: Unsigned + NumCast + Copy + Debug> PixelMap<T, U> {
     /// Obtain the pixel size of this [PixelMap]. When a node's region is of this size, it cannot
     /// be subdivided further.
     #[inline]
+    #[must_use]
     pub fn pixel_size(&self) -> u8 {
         self.pixel_size
     }
 
     /// Obtain the region that this [PixelMap] covers.
     #[inline]
+    #[must_use]
     pub fn region(&self) -> &Region<U> {
         self.root.region()
     }
@@ -73,6 +76,7 @@ impl<T: Copy + PartialEq, U: Unsigned + NumCast + Copy + Debug> PixelMap<T, U> {
     ///
     /// - `point`: The coordinates of the pixel for which to retrieve the associated value.
     #[inline]
+    #[must_use]
     pub fn get_pixel<P>(&self, point: P) -> Option<T>
     where
         P: Into<IVec2>,
@@ -95,6 +99,7 @@ impl<T: Copy + PartialEq, U: Unsigned + NumCast + Copy + Debug> PixelMap<T, U> {
     ///
     /// If the coordinates are outside the region covered by this [PixelMap], `None` is returned.
     #[inline]
+    #[must_use]
     pub fn get_path<P>(&self, point: P) -> Option<NodePath>
     where
         P: Into<IVec2>,
@@ -247,6 +252,7 @@ impl<T: Copy + PartialEq, U: Unsigned + NumCast + Copy + Debug> PixelMap<T, U> {
     /// predicate. Or `Some(false)` if no nodes within `rect` match the predicate.
     /// `None` if `rect` does not overlap the region covered by this [PixelMap].
     #[inline]
+    #[must_use]
     pub fn any_in_rect<F>(&self, rect: &IRect, mut f: F) -> Option<bool>
     where
         F: FnMut(&PNode<T, U>, &IRect) -> bool,
@@ -270,6 +276,7 @@ impl<T: Copy + PartialEq, U: Unsigned + NumCast + Copy + Debug> PixelMap<T, U> {
     /// predicate. Or `Some(false)` if none or some of the nodes within `rect` match the predicate.
     /// `None` if `rect` does not overlap the region covered by this [PixelMap].
     #[inline]
+    #[must_use]
     pub fn all_in_rect<F>(&self, rect: &IRect, mut f: F) -> Option<bool>
     where
         F: FnMut(&PNode<T, U>, &IRect) -> bool,
@@ -432,6 +439,7 @@ impl<T: Copy + PartialEq, U: Unsigned + NumCast + Copy + Debug> PixelMap<T, U> {
     ///
     /// A [RayCastResult] that contains the collision result and related information.
     #[inline]
+    #[must_use]
     pub fn ray_cast<F>(&self, query: RayCastQuery, mut collision_check: F) -> RayCastResult
     where
         F: FnMut(&PNode<T, U>) -> RayCast,
@@ -455,6 +463,7 @@ impl<T: Copy + PartialEq, U: Unsigned + NumCast + Copy + Debug> PixelMap<T, U> {
     /// # Returns
     ///
     /// A [Stats] struct that contains information about [PixelMap]'s current state.
+    /// #[must_use]
     pub fn stats(&self) -> Stats {
         let mut stats = Stats::default();
         self.root.visit_nodes(&mut |node| {
