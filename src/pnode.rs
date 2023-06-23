@@ -1,16 +1,12 @@
 use super::{
     ICircle, IRect, Quadrant, RayCast, RayCastContext, RayCastQuery, RayCastResult, Region,
 };
-use crate::distance_to;
+use crate::{distance_to, NodePath};
 use glam::IVec2;
 use num_traits::{NumCast, Unsigned};
 use std::fmt::Debug;
 
-pub type NodePath = u64;
 pub type Children<T, U> = Box<[PNode<T, U>; 4]>;
-
-pub const NODE_PATH_MASK: NodePath = 0xffffff;
-pub const NODE_PATH_DEPTH: NodePath = 48;
 
 /// A node of a [crate::PixelMap] quad tree.
 #[derive(Clone, Debug, PartialEq)]
@@ -340,32 +336,32 @@ impl<T: Copy + PartialEq, U: Unsigned + NumCast + Copy + Debug> PNode<T, U> {
         loop {
             if let Some(children) = &node.children {
                 let q = node.region.quadrant_for(point);
-                path |= (q as NodePath) << (depth * 2);
+                path |= (q as u64) << (depth * 2);
                 depth += 1;
                 node = &children[q as usize];
             } else {
                 depth += 1;
-                return path | (depth << NODE_PATH_DEPTH);
+                return NodePath::encode(depth, path);
             }
         }
     }
 
     #[inline]
     pub(super) fn find_node_by_path(&self, path: NodePath) -> Option<&PNode<T, U>> {
-        let mut path_depth = (path >> NODE_PATH_DEPTH) as usize;
+        let mut path_depth = path.depth() as u64;
         if path_depth == 0 {
             return None;
         }
         path_depth -= 1; // make zero-based for bit indexing
 
         let mut node = self;
-        let mut depth = 0;
+        let mut depth = 0u64;
         loop {
             if depth == path_depth {
                 return Some(node);
             }
             if let Some(children) = &node.children {
-                let q = (path >> (depth * 2)) & 0b11;
+                let q = (*path >> (depth * 2)) & 0b11;
                 depth += 1;
                 node = &children[q as usize];
             } else {
@@ -606,81 +602,81 @@ mod test {
         let mut n = PNode::new(Region::new(0u32, 0, 4), false, false);
 
         let path = n.node_path((0, 0).into());
-        assert_eq!(path >> NODE_PATH_DEPTH, 1);
+        assert_eq!(path.depth(), 1);
 
         n.subdivide();
 
         let path = n.node_path((0, 0).into());
-        assert_eq!(path & NODE_PATH_MASK, 0);
-        assert_eq!(path >> NODE_PATH_DEPTH, 2);
+        assert_eq!(path.path_bits(), 0);
+        assert_eq!(path.depth(), 2);
 
         n.children.as_mut().unwrap()[0].subdivide();
 
         let path = n.node_path((0, 0).into());
-        assert_eq!(path & NODE_PATH_MASK, 0);
-        assert_eq!(path >> NODE_PATH_DEPTH, 3);
+        assert_eq!(path.path_bits(), 0);
+        assert_eq!(path.depth(), 3);
 
         let path = n.node_path((1, 1).into());
-        assert_eq!(path & NODE_PATH_MASK, 0b1000);
-        assert_eq!(path >> NODE_PATH_DEPTH, 3);
+        assert_eq!(path.path_bits(), 0b1000);
+        assert_eq!(path.depth(), 3);
 
         let path = n.node_path((2, 2).into());
-        assert_eq!(path & NODE_PATH_MASK, 0b10);
-        assert_eq!(path >> NODE_PATH_DEPTH, 2);
+        assert_eq!(path.path_bits(), 0b10);
+        assert_eq!(path.depth(), 2);
 
         let path = n.node_path((3, 3).into());
-        assert_eq!(path & NODE_PATH_MASK, 0b10);
-        assert_eq!(path >> NODE_PATH_DEPTH, 2);
+        assert_eq!(path.path_bits(), 0b10);
+        assert_eq!(path.depth(), 2);
     }
 
     #[test]
     fn test_find_node_by_path() {
         let mut n = PNode::new(Region::new(0u32, 0, 4), false, false);
 
-        let node = n.find_node_by_path(0);
+        let node = n.find_node_by_path(NodePath::ROOT);
         assert_eq!(node, None);
 
-        let node = n.find_node_by_path(1 << NODE_PATH_DEPTH);
+        let node = n.find_node_by_path(NodePath::encode(1, 0));
         assert_eq!(*node.unwrap(), n);
 
-        let node = n.find_node_by_path(2 << NODE_PATH_DEPTH);
+        let node = n.find_node_by_path(NodePath::encode(2, 0));
         assert_eq!(node, None);
 
         n.subdivide();
 
-        let node = n.find_node_by_path(0);
+        let node = n.find_node_by_path(NodePath::ROOT);
         assert_eq!(node, None);
 
-        let node = n.find_node_by_path(1 << NODE_PATH_DEPTH);
+        let node = n.find_node_by_path(NodePath::encode(1, 0));
         assert_eq!(*node.unwrap(), n);
 
-        let node = n.find_node_by_path(2 << NODE_PATH_DEPTH);
+        let node = n.find_node_by_path(NodePath::encode(2, 0));
         assert_eq!(*node.unwrap(), n.children.as_ref().unwrap()[0]);
 
-        let node = n.find_node_by_path((2 << NODE_PATH_DEPTH) | 0b01);
+        let node = n.find_node_by_path(NodePath::encode(2, 0b01));
         assert_eq!(*node.unwrap(), n.children.as_ref().unwrap()[1]);
 
-        let node = n.find_node_by_path((2 << NODE_PATH_DEPTH) | 0b10);
+        let node = n.find_node_by_path(NodePath::encode(2, 0b10));
         assert_eq!(*node.unwrap(), n.children.as_ref().unwrap()[2]);
 
-        let node = n.find_node_by_path((2 << NODE_PATH_DEPTH) | 0b11);
+        let node = n.find_node_by_path(NodePath::encode(2, 0b11));
         assert_eq!(*node.unwrap(), n.children.as_ref().unwrap()[3]);
 
-        let node = n.find_node_by_path(3 << NODE_PATH_DEPTH);
+        let node = n.find_node_by_path(NodePath::encode(3, 0b11));
         assert_eq!(node, None);
 
         n.children.as_mut().unwrap()[0].subdivide();
 
-        let node = n.find_node_by_path(2 << NODE_PATH_DEPTH);
+        let node = n.find_node_by_path(NodePath::encode(2, 0));
         assert_eq!(*node.unwrap(), n.children.as_ref().unwrap()[0]);
 
-        let node = n.find_node_by_path(3 << NODE_PATH_DEPTH);
+        let node = n.find_node_by_path(NodePath::encode(3, 0));
         assert_eq!(
             *node.unwrap(),
             n.children.as_ref().unwrap()[0].children.as_ref().unwrap()[0]
         );
 
-        let node = n.find_node_by_path(4 << NODE_PATH_DEPTH);
+        let node = n.find_node_by_path(NodePath::encode(4, 0));
         assert_eq!(node, None);
     }
 

@@ -29,6 +29,17 @@ impl Quadrant {
             Quadrant::BottomRight
         }
     }
+
+    #[inline]
+    pub fn from_value(value: u8) -> Option<Quadrant> {
+        match value {
+            0 => Some(Quadrant::BottomLeft),
+            1 => Some(Quadrant::BottomRight),
+            2 => Some(Quadrant::TopRight),
+            3 => Some(Quadrant::TopLeft),
+            _ => None,
+        }
+    }
 }
 
 #[cfg(test)]
