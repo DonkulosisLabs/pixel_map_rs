@@ -66,26 +66,40 @@ impl NodePath {
     }
 
     #[inline]
-    pub fn parent(&self) -> NodePath {
-        // Special case: This path is the root
-        if *self == Self::ROOT {
-            return Self::ROOT;
-        }
-
-        let (depth, path) = self.components();
-        let parent_depth = depth - 1;
-        // Erase the bits of the current path element
-        let parent_path = path & (!(0b11 << (2 * parent_depth)));
-
-        Self::encode(parent_depth, parent_path)
-    }
-
-    #[inline]
     pub fn append(&mut self, quadrant: Quadrant) {
         let (depth, path) = self.components();
         let new_depth = depth + 1;
         let new_path = path | ((quadrant as u64) << (2 * depth));
         *self = Self::encode(new_depth, new_path);
+    }
+
+    #[inline]
+    pub fn parent(&self) -> NodePath {
+        self.truncate(1)
+    }
+
+    #[inline]
+    pub fn truncate(&self, count: u16) -> NodePath {
+        // Special case: count is zero
+        if count == 0 {
+            return *self;
+        }
+
+        let mut node = *self;
+        for _ in 0..count {
+            let (depth, path) = node.components();
+            if depth == 0 {
+                return node;
+            }
+
+            let parent_depth = depth - 1;
+            // Erase the bits of the current path element
+            let parent_path = path & (!(0b11 << (2 * parent_depth)));
+
+            node = Self::encode(parent_depth, parent_path)
+        }
+
+        node
     }
 
     pub fn common_ancestor(&self, b: NodePath) -> NodePath {
@@ -188,6 +202,29 @@ mod test {
 
         let path = NodePath::encode(10, 0b01010101010101010101);
         assert_eq!(path.parent(), NodePath::encode(9, 0b010101010101010101));
+    }
+
+    #[test]
+    fn test_truncate() {
+        assert_eq!(NodePath::ROOT.parent(), NodePath::ROOT);
+
+        let path = NodePath::encode(1, 0b01);
+        assert_eq!(path.truncate(1), NodePath::ROOT);
+
+        let path = NodePath::encode(1, 0b01);
+        assert_eq!(path.truncate(2), NodePath::ROOT);
+
+        let path = NodePath::encode(2, 0b0101);
+        assert_eq!(path.truncate(1), NodePath::encode(1, 0b01));
+
+        let path = NodePath::encode(2, 0b0101);
+        assert_eq!(path.truncate(2), NodePath::ROOT);
+
+        let path = NodePath::encode(2, 0b0101);
+        assert_eq!(path.truncate(3), NodePath::ROOT);
+
+        let path = NodePath::encode(3, 0b110101);
+        assert_eq!(path.truncate(2), NodePath::encode(1, 0b01));
     }
 
     #[test]
