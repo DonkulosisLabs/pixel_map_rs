@@ -8,6 +8,8 @@ repository = "https://github.com/DonkulosisLabs/pixel_map_rs"
 readme = "README.md"
 license-file = "LICENSE"
 edition = "2021"
+keywords = ["pixel", "map", "image", "quadtree", "data-structure"]
+categories = ["data-structures", "multimedia::images"]
 
 [dependencies]
 glam = "^0.23.0"
