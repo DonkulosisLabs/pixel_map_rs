@@ -1,9 +1,9 @@
 # The `pixel_map` Rust Crate
 
-[![Crates.io](https://img.shields.io/crates/v/pixel_map)](https://crates.io/crates/pixel_map)
+[![crates.io](https://img.shields.io/crates/v/pixel_map)](https://crates.io/crates/pixel_map)
 [![docs](https://docs.rs/pixel_map/badge.svg)](https://docs.rs/pixel_map/)
 [![license](https://img.shields.io/badge/license-MIT-blue.svg)](https://github.com/DonkulosisLabs/pixel_map/blob/master/LICENSE)
-[![Crates.io](https://img.shields.io/crates/d/pixel_map)](https://crates.io/crates/pixel_map)
+[![build status](https://github.com/DonkulosisLabs/pixel_map_rs/actions/workflows/ci.yml/badge.svg)](https://github.com/donkulosislabs/pixel_map_rs/actions?query=workflow%3A%22ci%22)
 
 A `pixel_map` stores pixel data for a square image in a quad tree structure.
 
