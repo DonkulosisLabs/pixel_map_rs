@@ -5,13 +5,82 @@
 [![license](https://img.shields.io/badge/license-MIT-blue.svg)](https://github.com/DonkulosisLabs/pixel_map/blob/master/LICENSE)
 [![build status](https://github.com/DonkulosisLabs/pixel_map_rs/actions/workflows/ci.yml/badge.svg)](https://github.com/donkulosislabs/pixel_map_rs/actions?query=workflow%3A%22ci%22)
 
-A `pixel_map` stores pixel data for a square image in a quad tree structure.
+A `PixelMap` stores pixel data for an image in a quad tree structure.
+
+## Overview
+
+A `PixelMap` is an MX quadtree implementation, occupies a region of two-dimensional space at the 
+root node, and subdivides down to the pixel level. A type-generic pixel data value can be stored
+for each pixel in the map, but the tree structure optimizes storage for regions of common values.
+A pixel value must be `Copy + PartialEq`.
+
+Project status: **alpha**. Releases may contain breaking changes.
+
+## Usage
+
+### Installation
+
+Add the crate to your `Cargo.toml`:
+
+```bash
+cargo add pixel_map
+```
+
+### Creating a Pixel Map
+
+```rust
+use pixel_map::PixelMap;
+
+// Example pixel data
+struct MyColor(u8, u8, u8);
+
+let mut pixel_map = PixelMap<MyColor>::new(
+    Region::new(
+        0,   // position x
+        0,   // position y
+        1024 // size
+    ),
+    MyColor(0, 0, 0), // initial value
+    1,                // pixel size
+);
+
+```
+
+### Drawing on the PixelMap
+
+```rust
+// Set a pixel
+pixel_map.set_pixel((11, 12), MyColor(255, 0, 0));
+
+// Draw a line
+pixel_map.draw_line(&ILine::new((500, 500), (600, 400)), MyColor(0, 255, 0));
+
+// Draw a rectangle
+pixel_map.draw_rect(&IRect::from_corners((200, 200), (300, 300)), MyColor(0, 0, 255));
+
+// Draw a circle
+pixel_map.draw_circle(&ICircle::new((500, 500), 100), MyColor(0, 0, 255));
+```
+
+### Navigating the PixelMap
+
+```rust
+// Visit all leaf nodes
+pixel_map.visit(|node| {
+    println!("region: {:?}, value: {:?}", node.region(), node.value());
+});
+
+// Visit all leaf nodes that have been modified
+pixel_map.visit_dirty(|node| {
+    println!("region: {:?}, value: {:?}", node.region(), node.value());
+});
+pixel_map.clear_dirty(true /*recurse*/);
+```
 
 ## Features
 
-* Stores data, like a colour value, for each pixel in the map, but
-  optimizes storage for regions of common values (as per the function/purpose of quad trees).
 * Set individual pixel values, or draw primitive shapes:
+  * Lines 
   * Rectangles
   * Circles
 * Split a pixel map into owned quadrants for parallel processing, and merge quadrants 
@@ -28,4 +97,6 @@ A `pixel_map` stores pixel data for a square image in a quad tree structure.
 * In order to simplify and optimise pixel map operations, the pixel map is always square, and the
   number of pixels in each dimension must be a power of two.
 
+## License
 
+Licensed under MIT license (`LICENSE` or https://opensource.org/licenses/MIT)
