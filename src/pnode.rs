@@ -156,19 +156,6 @@ impl<T: Copy + PartialEq, U: Unsigned + NumCast + Copy + Debug> PNode<T, U> {
         }
     }
 
-    // Visit all nodes, mutably.
-    pub(super) fn visit_nodes_mut<F>(&mut self, visitor: &mut F)
-    where
-        F: FnMut(&mut PNode<T, U>),
-    {
-        visitor(self);
-        if let Some(children) = &mut self.children {
-            for child in children.as_mut() {
-                child.visit_nodes_mut(visitor);
-            }
-        }
-    }
-
     // Visit all leaf nodes.
     pub(super) fn visit_leaves<F>(&self, visitor: &mut F)
     where
@@ -361,6 +348,7 @@ impl<T: Copy + PartialEq, U: Unsigned + NumCast + Copy + Debug> PNode<T, U> {
 
     #[inline]
     #[must_use]
+    #[allow(dead_code)]
     pub(super) fn find_node_by_path(&self, path: NodePath) -> Option<&PNode<T, U>> {
         let mut path_depth = path.depth() as u64;
         if path_depth == 0 {
