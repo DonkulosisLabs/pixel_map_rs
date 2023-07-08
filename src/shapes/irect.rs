@@ -1,5 +1,5 @@
 use super::ILine;
-use crate::Region;
+use crate::{Direction, Region};
 use glam::IVec2;
 
 use num_traits::{NumCast, Unsigned};
@@ -136,6 +136,14 @@ impl IRect {
         self.max - self.min
     }
 
+    /// Get the area of this rectangle.
+    /// This is equivalent to `width * height`.
+    #[inline]
+    #[must_use]
+    pub fn area(&self) -> u32 {
+        self.width() * self.height()
+    }
+
     /// Get the left bounds of this rectangle, inclusive.
     #[inline]
     #[must_use]
@@ -240,6 +248,54 @@ impl IRect {
         self.distance_squared_to(point).sqrt()
     }
 
+    /// Measure the axis-aligned distance from the given point to the edge's ray indicated by the
+    /// given direction.
+    ///
+    /// # Parameters
+    ///
+    /// * `point`: The point from which to measure.
+    /// * `direction`: A direction representing an edge of the rectangle, for example,
+    ///   `Direction::North` for the top edge.
+    ///
+    /// # Panics
+    ///
+    /// Panics if the given direction is not a cardinal direction.
+    #[inline]
+    #[must_use]
+    pub fn distance_to_edge<P>(&self, point: P, direction: Direction) -> i32
+    where
+        P: Into<IVec2>,
+    {
+        let point = point.into();
+        match direction {
+            Direction::North => (self.min.y - point.y).abs(),
+            Direction::South => (point.y - self.max.y).abs(),
+            Direction::East => (self.min.x - point.x).abs(),
+            Direction::West => (point.x - self.max.x).abs(),
+            _ => panic!("invalid direction: {:?}", direction),
+        }
+    }
+
+    /// Ensure the given point is within this rectangle.
+    #[inline]
+    #[must_use]
+    pub fn clamp(&self, point: IVec2) -> IVec2 {
+        let mut point = point;
+        if point.x < self.min.x {
+            point.x = self.min.x;
+        }
+        if point.x > self.max.x {
+            point.x = self.max.x;
+        }
+        if point.y < self.min.y {
+            point.y = self.min.y;
+        }
+        if point.y > self.max.y {
+            point.y = self.max.y;
+        }
+        point
+    }
+
     /// Determine if this rectangle contains the given rectangle.
     #[inline]
     #[must_use]
@@ -294,6 +350,18 @@ impl IRect {
         } else {
             Some(r)
         }
+    }
+
+    /// Get the four corners of this rectangle, in #{Quadrant} order.
+    #[inline]
+    #[must_use]
+    pub fn points(&self) -> [IVec2; 4] {
+        [
+            self.min,
+            self.min + IVec2::new(self.width() as i32, 0),
+            self.max,
+            self.min + IVec2::new(0, self.height() as i32),
+        ]
     }
 
     /// Get the four lines that make up the edges of this rectangle.
@@ -554,12 +622,29 @@ mod test {
     #[test]
     fn test_distance_to() {
         let rect = IRect::new(1, 1, 3, 3);
-        assert_eq!(rect.distance_to((0, 0)), 1.4142135);
+        assert_eq!(rect.distance_to((0, 0)), std::f32::consts::SQRT_2);
         assert_eq!(rect.distance_to((1, 1)), 0.0);
         assert_eq!(rect.distance_to((2, 2)), 0.0);
         assert_eq!(rect.distance_to((3, 3)), 0.0);
-        assert_eq!(rect.distance_to((4, 4)), 1.4142135);
-        assert_eq!(rect.distance_to((5, 5)), 2.828427);
+        assert_eq!(rect.distance_to((4, 4)), std::f32::consts::SQRT_2);
+        assert_eq!(rect.distance_to((5, 5)), std::f32::consts::SQRT_2 * 2.);
+    }
+
+    #[test]
+    fn test_distance_to_edge() {
+        let rect = IRect::new(1, 1, 3, 3);
+        assert_eq!(rect.distance_to_edge((0, 0), Direction::East), 1);
+        assert_eq!(rect.distance_to_edge((0, 0), Direction::North), 1);
+        assert_eq!(rect.distance_to_edge((0, 0), Direction::West), 3);
+        assert_eq!(rect.distance_to_edge((0, 0), Direction::South), 3);
+        assert_eq!(rect.distance_to_edge((1, 1), Direction::East), 0);
+        assert_eq!(rect.distance_to_edge((1, 1), Direction::North), 0);
+        assert_eq!(rect.distance_to_edge((1, 1), Direction::West), 2);
+        assert_eq!(rect.distance_to_edge((1, 1), Direction::South), 2);
+        assert_eq!(rect.distance_to_edge((2, 2), Direction::East), 1);
+        assert_eq!(rect.distance_to_edge((2, 2), Direction::North), 1);
+        assert_eq!(rect.distance_to_edge((2, 2), Direction::West), 1);
+        assert_eq!(rect.distance_to_edge((2, 2), Direction::South), 1);
     }
 
     #[test]

@@ -4,6 +4,7 @@ use super::{
 use crate::{ILine, NodePath, Quadrant, Shape};
 use glam::IVec2;
 use num_traits::{NumCast, Unsigned};
+use std::collections::HashSet;
 use std::fmt::{Debug, Formatter};
 
 /// A map of pixels in a square region implemented by an MX quad tree.
@@ -106,7 +107,7 @@ impl<T: Copy + PartialEq, U: Unsigned + NumCast + Copy + Debug> PixelMap<T, U> {
     {
         let point = point.into();
         if self.root.region().contains(point) {
-            let path = self.root.node_path(point);
+            let (_, path) = self.root.node_path(point);
             Some(path)
         } else {
             None
@@ -423,6 +424,58 @@ impl<T: Copy + PartialEq, U: Unsigned + NumCast + Copy + Debug> PixelMap<T, U> {
         });
 
         (vertices, indices)
+    }
+
+    /// Obtain the points of node region corners that overlap with the given rectangle, and match
+    /// the given predicate. Calls #[Self::collect_points] internally, but takes a guess at a
+    /// reasonable capacity for the resulting HashSet.
+    ///
+    /// # Parameters
+    ///
+    /// - `rect`: The rectangle in which contained or overlapping nodes will be visited.
+    /// - `offset`: An offset to apply to returned points.
+    /// - `predicate`: A closure that takes a reference to a leaf node, and a reference to a rectangle as parameters.
+    ///   This rectangle represents the intersection of the node's region and the `rect` parameter supplied to this method.
+    ///   It returns `true` if the node matches the predicate, or `false` otherwise.
+    pub fn points<F>(&self, rect: &IRect, offset: IVec2, predicate: F) -> HashSet<IVec2>
+    where
+        F: FnMut(&PNode<T, U>, &IRect) -> bool,
+    {
+        let mut result = HashSet::with_capacity(rect.area() as usize / 4);
+        self.collect_points(rect, offset, predicate, &mut result);
+        result
+    }
+
+    /// Collect the points of node region corners that overlap with the given rectangle, and match
+    /// the given predicate.
+    ///
+    /// # Parameters
+    ///
+    /// - `rect`: The rectangle in which contained or overlapping nodes will be visited.
+    /// - `offset`: An offset to apply to returned points.
+    /// - `predicate`: A closure that takes a reference to a leaf node, and a reference to a rectangle as parameters.
+    ///   This rectangle represents the intersection of the node's region and the `rect` parameter supplied to this method.
+    ///   It returns `true` if the node matches the predicate, or `false` otherwise.
+    /// - `hash`: A HashSet into which matching points will be inserted.
+    #[inline]
+    pub fn collect_points<F>(
+        &self,
+        rect: &IRect,
+        offset: IVec2,
+        mut predicate: F,
+        hash: &mut HashSet<IVec2>,
+    ) where
+        F: FnMut(&PNode<T, U>, &IRect) -> bool,
+    {
+        self.visit_in_rect(rect, |node, sub_rect| {
+            debug_assert!(!sub_rect.is_empty());
+            if predicate(node, sub_rect) {
+                let points = sub_rect.points();
+                for p in points {
+                    hash.insert(p + offset);
+                }
+            }
+        });
     }
 
     /// Visit all leaf nodes in this [PixelMap] for which the region overlaps with the line

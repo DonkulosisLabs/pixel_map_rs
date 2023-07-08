@@ -329,7 +329,7 @@ impl<T: Copy + PartialEq, U: Unsigned + NumCast + Copy + Debug> PNode<T, U> {
 
     #[inline]
     #[must_use]
-    pub(super) fn node_path(&self, point: IVec2) -> NodePath {
+    pub(super) fn node_path(&self, point: IVec2) -> (&PNode<T, U>, NodePath) {
         let mut depth = 0;
         let mut node = self;
         let mut path = 0;
@@ -341,7 +341,7 @@ impl<T: Copy + PartialEq, U: Unsigned + NumCast + Copy + Debug> PNode<T, U> {
                 node = &children[q as usize];
             } else {
                 depth += 1;
-                return NodePath::encode(depth, path);
+                return (node, NodePath::encode(depth, path));
             }
         }
     }
@@ -537,6 +537,7 @@ impl<T: Copy + PartialEq, U: Unsigned + NumCast + Copy + Debug> PNode<T, U> {
         }
     }
 
+    #[inline]
     fn recalc_dirty(&mut self) {
         if let Some(children) = &self.children {
             self.dirty = children.iter().any(|child| child.dirty);
@@ -605,30 +606,30 @@ mod test {
     fn test_node_path() {
         let mut n = PNode::new(Region::new(0u32, 0, 4), false, false);
 
-        let path = n.node_path((0, 0).into());
+        let (_, path) = n.node_path((0, 0).into());
         assert_eq!(path.depth(), 1);
 
         n.subdivide();
 
-        let path = n.node_path((0, 0).into());
+        let (_, path) = n.node_path((0, 0).into());
         assert_eq!(path.path_bits(), 0);
         assert_eq!(path.depth(), 2);
 
         n.children.as_mut().unwrap()[0].subdivide();
 
-        let path = n.node_path((0, 0).into());
+        let (_, path) = n.node_path((0, 0).into());
         assert_eq!(path.path_bits(), 0);
         assert_eq!(path.depth(), 3);
 
-        let path = n.node_path((1, 1).into());
+        let (_, path) = n.node_path((1, 1).into());
         assert_eq!(path.path_bits(), 0b1000);
         assert_eq!(path.depth(), 3);
 
-        let path = n.node_path((2, 2).into());
+        let (_, path) = n.node_path((2, 2).into());
         assert_eq!(path.path_bits(), 0b10);
         assert_eq!(path.depth(), 2);
 
-        let path = n.node_path((3, 3).into());
+        let (_, path) = n.node_path((3, 3).into());
         assert_eq!(path.path_bits(), 0b10);
         assert_eq!(path.depth(), 2);
     }

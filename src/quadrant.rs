@@ -1,3 +1,4 @@
+use crate::Direction;
 use glam::IVec2;
 
 /// A quadrant in a box.
@@ -40,6 +41,38 @@ impl Quadrant {
             2 => Some(Quadrant::TopRight),
             3 => Some(Quadrant::TopLeft),
             _ => None,
+        }
+    }
+
+    /// Obtains the neighboring quadrant in the given direction, if there is one.
+    #[inline]
+    #[must_use]
+    pub fn neighbor(&self, direction: Direction) -> Option<Quadrant> {
+        match self {
+            Quadrant::BottomLeft => match direction {
+                Direction::North => Some(Quadrant::TopLeft),
+                Direction::East => Some(Quadrant::BottomRight),
+                Direction::NorthEast => Some(Quadrant::TopRight),
+                _ => None,
+            },
+            Quadrant::BottomRight => match direction {
+                Direction::North => Some(Quadrant::TopRight),
+                Direction::West => Some(Quadrant::BottomLeft),
+                Direction::NorthWest => Some(Quadrant::TopRight),
+                _ => None,
+            },
+            Quadrant::TopRight => match direction {
+                Direction::South => Some(Quadrant::BottomRight),
+                Direction::West => Some(Quadrant::TopLeft),
+                Direction::SouthWest => Some(Quadrant::BottomLeft),
+                _ => None,
+            },
+            Quadrant::TopLeft => match direction {
+                Direction::East => Some(Quadrant::TopRight),
+                Direction::South => Some(Quadrant::BottomLeft),
+                Direction::SouthEast => Some(Quadrant::BottomRight),
+                _ => None,
+            },
         }
     }
 }
