@@ -12,7 +12,7 @@ keywords = ["pixel", "map", "image", "quadtree", "data-structure"]
 categories = ["data-structures", "multimedia::images"]
 
 [dependencies]
-glam = "^0.23.0"
+glam = "^0.24.1"
 num-traits = "^0.2.15"
 
 [dev-dependencies]
