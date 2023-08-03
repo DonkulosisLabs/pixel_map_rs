@@ -1,7 +1,11 @@
+#[cfg(feature = "serde")]
+use serde::{Deserialize, Serialize};
+
 use super::IRect;
 use glam::IVec2;
 
 /// A circle represented by a center point, in integer coordinates, and a radius.
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[derive(Debug, Clone, Default, Eq, PartialEq)]
 pub struct ICircle {
     point: IVec2,
@@ -108,6 +112,7 @@ impl From<&IRect> for ICircle {
     }
 }
 
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub struct CirclePixelIterator {
     circle: ICircle,
     x: i32,

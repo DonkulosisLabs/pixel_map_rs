@@ -1,3 +1,6 @@
+#[cfg(feature = "serde")]
+use serde::{Deserialize, Serialize};
+
 use glam::IVec2;
 
 pub const NORTH: IVec2 = IVec2 { x: 0, y: 1 };
@@ -10,6 +13,7 @@ pub const SOUTH_WEST: IVec2 = IVec2 { x: -1, y: -1 };
 pub const WEST: IVec2 = IVec2 { x: -1, y: 0 };
 
 /// A direction in the 2D plane.
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Direction {
     North,

@@ -1,7 +1,11 @@
+#[cfg(feature = "serde")]
+use serde::{Deserialize, Serialize};
+
 use super::ILine;
 use super::LinePixelIterator;
 use glam::IVec2;
 
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[derive(Debug, Default, Clone, Copy, Eq, PartialEq)]
 pub struct RayCastQuery {
     pub line: ILine,
@@ -15,6 +19,7 @@ impl RayCastQuery {
     }
 }
 
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct RayCastResult {
     pub collision_point: Option<IVec2>,

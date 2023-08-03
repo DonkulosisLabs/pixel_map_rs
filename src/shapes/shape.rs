@@ -1,7 +1,11 @@
+#[cfg(feature = "serde")]
+use serde::{Deserialize, Serialize};
+
 use crate::LinePixelIterator;
 use crate::{CirclePixelIterator, ICircle, ILine, IRect, RectPixelIterator};
 use glam::IVec2;
 
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub enum Shape {
     Point { point: IVec2 },
     Line { line: ILine },
@@ -43,6 +47,7 @@ impl Shape {
     }
 }
 
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub enum ShapePixelIterator {
     Point { iter: PointPixelIterator },
     Line { iter: LinePixelIterator },
@@ -63,6 +68,7 @@ impl Iterator for ShapePixelIterator {
     }
 }
 
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub struct PointPixelIterator {
     point: Option<IVec2>,
 }

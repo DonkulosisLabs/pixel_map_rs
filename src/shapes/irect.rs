@@ -1,3 +1,6 @@
+#[cfg(feature = "serde")]
+use serde::{Deserialize, Serialize};
+
 use super::ILine;
 use crate::{Direction, Region};
 use glam::IVec2;
@@ -6,6 +9,7 @@ use num_traits::{NumCast, Unsigned};
 use std::ops;
 
 /// An immutable rectangle defined by a minimum and maximum point, in integer coordinates.
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[derive(Debug, Clone, Default, Eq, PartialEq)]
 pub struct IRect {
     min: IVec2,
@@ -493,6 +497,7 @@ impl From<&ILine> for IRect {
     }
 }
 
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub struct RectPixelIterator {
     rect: IRect,
     x: i32,

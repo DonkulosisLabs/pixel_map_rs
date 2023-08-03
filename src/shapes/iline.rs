@@ -1,3 +1,6 @@
+#[cfg(feature = "serde")]
+use serde::{Deserialize, Serialize};
+
 use super::line_interval::LineInterval;
 use super::line_iterator::{plot_line, LinePixelIterator};
 use super::IRect;
@@ -5,6 +8,7 @@ use crate::Direction;
 use glam::IVec2;
 
 /// A line segment represented by two points, in integer coordinates.
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
 pub struct ILine {
     start: IVec2,

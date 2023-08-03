@@ -13,10 +13,14 @@ categories = ["data-structures", "multimedia::images"]
 
 [dependencies]
 glam = "^0.24.1"
-num-traits = "^0.2.15"
+num-traits = "^0.2.16"
+serde = { version = "^1.0.180", features = ["derive"], optional = true, default-features = false}
 
 [dev-dependencies]
-criterion = "0.4"
+criterion = "0.5.1"
+
+[features]
+serde = ["dep:serde", "glam/serde" ]
 
 [[bench]]
 name = "set_pixel"
