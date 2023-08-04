@@ -711,6 +711,7 @@ pub struct Stats {
 #[cfg(test)]
 mod test {
     use crate::*;
+    use ron;
 
     #[test]
     fn test_u_type_parameters() {
@@ -895,5 +896,19 @@ mod test {
             pm.all_in_rect(&IRect::new(1, 1, 2, 2), |n, _| n.value()),
             Some(false)
         );
+    }
+
+    #[test]
+    #[cfg(feature = "serde")]
+    fn test_serialization() {
+        let mut pm: PixelMap<bool, u32> = PixelMap::new(Region::new(0u32, 0, 2), false, 1);
+        pm.set_pixel((0, 0), true);
+
+        let pmstr = ron::to_string(&pm).unwrap();
+        let pm2: PixelMap<bool, u32> = ron::from_str(&pmstr).unwrap();
+
+        assert_eq!(pm.root, pm2.root);
+        assert_eq!(pm.pixel_size, pm2.pixel_size);
+        assert!(pm2.get_pixel((0, 0)).unwrap());
     }
 }
