@@ -2,7 +2,7 @@
 
 [![crates.io](https://img.shields.io/crates/v/pixel_map)](https://crates.io/crates/pixel_map)
 [![docs](https://docs.rs/pixel_map/badge.svg)](https://docs.rs/pixel_map/)
-[![license](https://img.shields.io/badge/license-MIT-blue.svg)](https://github.com/DonkulosisLabs/pixel_map/blob/master/LICENSE)
+![MIT/Apache 2.0](https://img.shields.io/badge/license-MIT%2FApache-blue.svg)
 [![build status](https://github.com/DonkulosisLabs/pixel_map_rs/actions/workflows/ci.yml/badge.svg)](https://github.com/donkulosislabs/pixel_map_rs/actions?query=workflow%3A%22ci%22)
 
 A `PixelMap` stores pixel data for an image in a quad tree structure.
@@ -99,4 +99,8 @@ pixel_map.clear_dirty(true /*recurse*/);
 
 ## License
 
-Licensed under MIT license (`LICENSE` or https://opensource.org/licenses/MIT)
+`pixel_map` is free and open source. All code in this repository is dual-licensed under 
+either of the following, at your option:
+
+* MIT License ([`LICENSE-MIT`](LICENSE-MIT) or http://opensource.org/licenses/MIT)
+* Apache License, Version 2.0 ([`LICENSE-APACHE`](LICENSE-APACHE) or http://www.apache.org/licenses/LICENSE-2.0)
