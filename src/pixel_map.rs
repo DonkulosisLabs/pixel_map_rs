@@ -520,7 +520,7 @@ impl<T: Copy + PartialEq, U: Unsigned + NumCast + Copy + Debug> PixelMap<T, U> {
     /// # Returns
     ///
     /// A [Stats] struct that contains information about [PixelMap]'s current state.
-    /// #[must_use]
+    #[must_use]
     pub fn stats(&self) -> Stats {
         let mut stats = Stats::default();
         self.root.visit_nodes(&mut |node| {
@@ -606,7 +606,7 @@ impl<T: Copy + PartialEq, U: Unsigned + NumCast + Copy + Debug> PixelMap<T, U> {
 
     /// Take the four top-level quadrant nodes in this [PixelMap] and
     /// create separate [PixelMap]s for each quadrant. The resulting slice can be indexed
-    /// by [crate::Quadrant].
+    /// by [Quadrant].
     ///
     /// # Returns
     ///
@@ -643,7 +643,7 @@ impl<T: Copy + PartialEq, U: Unsigned + NumCast + Copy + Debug> PixelMap<T, U> {
     ///
     /// - If the four quadrant [PixelMap]s have different pixel sizes.
     /// - If the four quadrant [PixelMap]s are different sizes.
-    /// - If the four quadrant [PixelMap]s are not positioned in the `quads` slice according to [crate::Quadrant].
+    /// - If the four quadrant [PixelMap]s are not positioned in the `quads` slice according to [Quadrant].
     #[must_use]
     #[inline]
     pub fn join(quads: [PixelMap<T, U>; 4]) -> Self {
@@ -711,7 +711,6 @@ pub struct Stats {
 #[cfg(test)]
 mod test {
     use crate::*;
-    use ron;
 
     #[test]
     fn test_u_type_parameters() {

@@ -722,7 +722,7 @@ mod test {
     }
 
     #[test]
-    fn test_visit() {
+    fn test_visit_nodes() {
         let mut n = PNode::new(Region::new(0u32, 0, 2), false, false);
         n.set_pixel((0, 0).into(), 1, true);
         n.set_pixel((1, 0).into(), 1, false);
