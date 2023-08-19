@@ -9,6 +9,7 @@ use glam::IVec2;
 use num_traits::{NumCast, Unsigned};
 use std::collections::HashSet;
 use std::fmt::{Debug, Formatter};
+use std::hash::BuildHasher;
 
 /// A map of pixels in a square region implemented by an MX quad tree.
 /// The coordinate origin is at the bottom left of the region.
@@ -72,6 +73,12 @@ impl<T: Copy + PartialEq, U: Unsigned + NumCast + Copy + Debug> PixelMap<T, U> {
     #[inline]
     pub fn clear(&mut self, value: T) {
         self.root.set_value(value);
+    }
+
+    /// Determine if this [PixelMap] is empty, which means that it has no pixel data.
+    #[inline]
+    pub fn empty(&self) -> bool {
+        self.root.children().is_none()
     }
 
     /// Get the value of the pixel at the given coordinates. If the coordinates are outside the
@@ -306,7 +313,9 @@ impl<T: Copy + PartialEq, U: Unsigned + NumCast + Copy + Debug> PixelMap<T, U> {
         F: FnMut(&PNode<T, U>),
     {
         let mut traversed = 0;
-        self.root.visit_dirty_leaves(&mut visitor, &mut traversed);
+        if self.root.dirty() {
+            self.root.visit_dirty_leaves(&mut visitor, &mut traversed);
+        }
         traversed
     }
 
@@ -329,9 +338,18 @@ impl<T: Copy + PartialEq, U: Unsigned + NumCast + Copy + Debug> PixelMap<T, U> {
         F: FnMut(&PNode<T, U>, &IRect),
     {
         let mut traversed = 0;
-        self.root
-            .visit_dirty_leaves_in_rect(rect, &mut visitor, &mut traversed);
+        if self.root.dirty() {
+            self.root
+                .visit_dirty_leaves_in_rect(rect, &mut visitor, &mut traversed);
+        }
         traversed
+    }
+
+    /// Determine if the root node is marked as dirty, which indicates that at least one leaf node
+    /// has changed (became dirty).
+    #[inline]
+    pub fn dirty(&self) -> bool {
+        self.root.dirty()
     }
 
     /// Visit all leaf nodes in this [PixelMap] that are marked as dirty, and consume
@@ -352,7 +370,9 @@ impl<T: Copy + PartialEq, U: Unsigned + NumCast + Copy + Debug> PixelMap<T, U> {
         F: FnMut(&PNode<T, U>),
     {
         let mut traversed = 0;
-        self.root.drain_dirty_leaves(&mut visitor, &mut traversed);
+        if self.root.dirty() {
+            self.root.drain_dirty_leaves(&mut visitor, &mut traversed);
+        }
         traversed
     }
 
@@ -462,14 +482,15 @@ impl<T: Copy + PartialEq, U: Unsigned + NumCast + Copy + Debug> PixelMap<T, U> {
     ///   It returns `true` if the node matches the predicate, or `false` otherwise.
     /// - `hash`: A HashSet into which matching points will be inserted.
     #[inline]
-    pub fn collect_points<F>(
+    pub fn collect_points<F, H>(
         &self,
         rect: &IRect,
         offset: IVec2,
         mut predicate: F,
-        hash: &mut HashSet<IVec2>,
+        hash: &mut HashSet<IVec2, H>,
     ) where
         F: FnMut(&PNode<T, U>, &IRect) -> bool,
+        H: BuildHasher,
     {
         self.visit_in_rect(rect, |node, sub_rect| {
             debug_assert!(!sub_rect.is_empty());

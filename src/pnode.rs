@@ -249,24 +249,26 @@ impl<T: Copy + PartialEq, U: Unsigned + NumCast + Copy + Debug> PNode<T, U> {
         None
     }
 
+    // This node must be known to be dirty.
     pub(super) fn visit_dirty_leaves<F>(&self, visitor: &mut F, traversed: &mut usize)
     where
         F: FnMut(&PNode<T, U>),
     {
         *traversed += 1;
 
-        if self.dirty() {
-            match self.children {
-                Some(ref children) => {
-                    for child in children.as_ref() {
+        match self.children {
+            Some(ref children) => {
+                for child in children.as_ref() {
+                    if child.dirty() {
                         child.visit_dirty_leaves(visitor, traversed);
                     }
                 }
-                None => visitor(self),
             }
+            None => visitor(self),
         }
     }
 
+    // This node must be known to be dirty.
     pub(super) fn visit_dirty_leaves_in_rect<F>(
         &self,
         rect: &IRect,
@@ -277,16 +279,14 @@ impl<T: Copy + PartialEq, U: Unsigned + NumCast + Copy + Debug> PNode<T, U> {
     {
         *traversed += 1;
 
-        if !self.dirty() {
-            return;
-        }
-
         let my_rect: IRect = self.region().into();
         if let Some(sub_rect) = my_rect.intersection(rect) {
             match self.children {
                 Some(ref children) => {
                     for child in children.as_ref() {
-                        child.visit_dirty_leaves_in_rect(rect, visitor, traversed);
+                        if child.dirty() {
+                            child.visit_dirty_leaves_in_rect(rect, visitor, traversed);
+                        }
                     }
                 }
                 None => visitor(self, &sub_rect),
@@ -294,21 +294,20 @@ impl<T: Copy + PartialEq, U: Unsigned + NumCast + Copy + Debug> PNode<T, U> {
         }
     }
 
+    // This node must be known to be dirty.
     pub(super) fn drain_dirty_leaves<F>(&mut self, visitor: &mut F, traversed: &mut usize)
     where
         F: FnMut(&PNode<T, U>),
     {
         *traversed += 1;
 
-        if !self.dirty() {
-            return;
-        }
-
         self.clear_dirty();
         match self.children {
             Some(ref mut children) => {
                 for child in children.as_mut() {
-                    child.drain_dirty_leaves(visitor, traversed);
+                    if child.dirty() {
+                        child.drain_dirty_leaves(visitor, traversed);
+                    }
                 }
             }
             None => visitor(self),
@@ -774,7 +773,7 @@ mod test {
             },
             &mut traversed,
         );
-        assert_eq!(traversed, 5);
+        assert_eq!(traversed, 2);
         assert!(!n.children.as_mut().unwrap()[Quadrant::BottomLeft as usize].dirty);
         assert!(!n.children.as_mut().unwrap()[Quadrant::BottomRight as usize].dirty);
         assert!(!n.children.as_mut().unwrap()[Quadrant::TopLeft as usize].dirty);
