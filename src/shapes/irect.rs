@@ -115,8 +115,7 @@ impl IRect {
     #[inline]
     #[must_use]
     pub fn center(&self) -> IVec2 {
-        let half_max = self.max / 2;
-        self.min + half_max
+        (self.min + self.max) / 2
     }
 
     /// Get the width of this rectangle.
