@@ -1,11 +1,9 @@
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
 
-use super::{
-    ICircle, IRect, Quadrant, RayCast, RayCastContext, RayCastQuery, RayCastResult, Region,
-};
+use super::{ICircle, Quadrant, RayCast, RayCastContext, RayCastQuery, RayCastResult, Region};
 use crate::{distance_to, NodePath};
-use glam::IVec2;
+use bevy_math::{IRect, IVec2};
 use num_traits::{NumCast, Unsigned};
 use std::fmt::Debug;
 
@@ -38,12 +36,12 @@ impl<T: Copy + PartialEq, U: Unsigned + NumCast + Copy + Debug> PNode<T, U> {
     pub(super) fn with_children(children: Children<T, U>, dirty: bool) -> Self {
         let mut rect: IRect = children[0].region().into();
         for child in &children[1..] {
-            rect = rect.union(&child.region().into());
+            rect = rect.union(child.region().into());
         }
         assert_eq!(rect.width(), rect.height());
         let region = Region::new(
-            num_traits::cast::cast(rect.x()).unwrap(),
-            num_traits::cast::cast(rect.y()).unwrap(),
+            num_traits::cast::cast(rect.min.x).unwrap(),
+            num_traits::cast::cast(rect.min.y).unwrap(),
             num_traits::cast::cast(rect.width()).unwrap(),
         );
 
@@ -176,18 +174,15 @@ impl<T: Copy + PartialEq, U: Unsigned + NumCast + Copy + Debug> PNode<T, U> {
     }
 
     // Visit all leaf nodes within a given rectangle boundary.
-    pub(super) fn visit_leaves_in_rect<F>(
-        &self,
-        rect: &IRect,
-        visitor: &mut F,
-        traversed: &mut usize,
-    ) where
+    pub(super) fn visit_leaves_in_rect<F>(&self, rect: &IRect, visitor: &mut F, traversed: &mut u32)
+    where
         F: FnMut(&PNode<T, U>, &IRect),
     {
         *traversed += 1;
 
         let my_rect: IRect = self.region().into();
-        if let Some(sub_rect) = my_rect.intersection(rect) {
+        let sub_rect = my_rect.intersect(*rect);
+        if !sub_rect.is_empty() {
             match self.children {
                 Some(ref children) => {
                     for child in children.as_ref() {
@@ -204,7 +199,8 @@ impl<T: Copy + PartialEq, U: Unsigned + NumCast + Copy + Debug> PNode<T, U> {
         F: FnMut(&PNode<T, U>, &IRect) -> bool,
     {
         let my_rect: IRect = self.region().into();
-        if let Some(sub_rect) = my_rect.intersection(rect) {
+        let sub_rect = my_rect.intersect(*rect);
+        if !sub_rect.is_empty() {
             match self.children {
                 Some(ref children) => {
                     for child in children.as_ref() {
@@ -229,7 +225,8 @@ impl<T: Copy + PartialEq, U: Unsigned + NumCast + Copy + Debug> PNode<T, U> {
         F: FnMut(&PNode<T, U>, &IRect) -> bool,
     {
         let my_rect: IRect = self.region().into();
-        if let Some(sub_rect) = my_rect.intersection(rect) {
+        let sub_rect = my_rect.intersect(*rect);
+        if !sub_rect.is_empty() {
             match self.children {
                 Some(ref children) => {
                     for child in children.as_ref() {
@@ -273,14 +270,15 @@ impl<T: Copy + PartialEq, U: Unsigned + NumCast + Copy + Debug> PNode<T, U> {
         &self,
         rect: &IRect,
         visitor: &mut F,
-        traversed: &mut usize,
+        traversed: &mut u32,
     ) where
         F: FnMut(&PNode<T, U>, &IRect),
     {
         *traversed += 1;
 
         let my_rect: IRect = self.region().into();
-        if let Some(sub_rect) = my_rect.intersection(rect) {
+        let sub_rect = my_rect.intersect(*rect);
+        if !sub_rect.is_empty() {
             match self.children {
                 Some(ref children) => {
                     for child in children.as_ref() {
@@ -444,21 +442,24 @@ impl<T: Copy + PartialEq, U: Unsigned + NumCast + Copy + Debug> PNode<T, U> {
     pub(super) fn draw_rect(&mut self, rect: &IRect, pixel_size: u8, value: T) {
         if self.contained_by_rect(rect) {
             self.set_value(value);
-        } else if let Some(sub_rect) = rect.intersection(&self.region().into()) {
-            if self.is_leaf() && value == self.value {
-                return;
-            }
-            if self.region.is_unit(pixel_size) {
-                self.set_value(value);
-            } else {
-                self.subdivide();
-                let children = self.children.as_mut().unwrap();
-                children[0].draw_rect(&sub_rect, pixel_size, value);
-                children[1].draw_rect(&sub_rect, pixel_size, value);
-                children[2].draw_rect(&sub_rect, pixel_size, value);
-                children[3].draw_rect(&sub_rect, pixel_size, value);
-                self.decimate();
-                self.recalc_dirty();
+        } else {
+            let sub_rect = rect.intersect(self.region().into());
+            if !sub_rect.is_empty() {
+                if self.is_leaf() && value == self.value {
+                    return;
+                }
+                if self.region.is_unit(pixel_size) {
+                    self.set_value(value);
+                } else {
+                    self.subdivide();
+                    let children = self.children.as_mut().unwrap();
+                    children[0].draw_rect(&sub_rect, pixel_size, value);
+                    children[1].draw_rect(&sub_rect, pixel_size, value);
+                    children[2].draw_rect(&sub_rect, pixel_size, value);
+                    children[3].draw_rect(&sub_rect, pixel_size, value);
+                    self.decimate();
+                    self.recalc_dirty();
+                }
             }
         }
     }
@@ -468,7 +469,7 @@ impl<T: Copy + PartialEq, U: Unsigned + NumCast + Copy + Debug> PNode<T, U> {
         let inner_rect = circle.inner_rect();
         if self.contained_by_rect(&inner_rect) {
             self.set_value(value);
-        } else if outer_rect.intersects_rect(&self.region.clone().into()) {
+        } else if !outer_rect.intersect(self.region().into()).is_empty() {
             self.draw_rect(&inner_rect, pixel_size, value);
             for p in circle.pixels() {
                 if inner_rect.contains(p) {

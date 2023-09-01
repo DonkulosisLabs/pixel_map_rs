@@ -2,7 +2,7 @@
 use serde::{Deserialize, Serialize};
 
 use crate::Direction;
-use glam::IVec2;
+use bevy_math::IVec2;
 
 /// A quadrant in a box.
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]

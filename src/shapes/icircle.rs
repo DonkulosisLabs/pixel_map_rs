@@ -1,8 +1,7 @@
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
 
-use super::IRect;
-use glam::IVec2;
+use bevy_math::{IRect, IVec2};
 
 /// A circle represented by a center point, in integer coordinates, and a radius.
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
@@ -74,16 +73,16 @@ impl ICircle {
     #[inline]
     #[must_use]
     pub fn aabb(&self) -> IRect {
-        let size = self.radius * 2;
-        IRect::centered_at(self.point, size, size)
+        let size = (self.radius * 2) as i32;
+        IRect::from_center_size(self.point, IVec2::new(size, size))
     }
 
     /// Get the axis-aligned largest rectangle contained within the circle.
     #[inline]
     #[must_use]
     pub fn inner_rect(&self) -> IRect {
-        let size = (self.radius as f32 * 2f32.sqrt()) as u32;
-        IRect::centered_at(self.point, size, size)
+        let size = (self.radius as f32 * 2f32.sqrt()) as i32;
+        IRect::from_center_size(self.point, IVec2::new(size, size))
     }
 
     /// Iterator over pixels in the circle.
@@ -103,10 +102,10 @@ impl From<IRect> for ICircle {
 impl From<&IRect> for ICircle {
     #[inline]
     fn from(rect: &IRect) -> Self {
-        let radius = rect.width().min(rect.height()) / 2;
+        let radius = (rect.width().min(rect.height()) / 2) as u32;
         let p = (
-            rect.x() + rect.width() as i32 / 2,
-            rect.y() + rect.height() as i32 / 2,
+            rect.min.x + rect.width() / 2,
+            rect.min.y + rect.height() / 2,
         );
         Self::new(p, radius)
     }

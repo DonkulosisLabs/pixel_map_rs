@@ -2,7 +2,7 @@
 use serde::{Deserialize, Serialize};
 
 use super::ILine;
-use glam::IVec2;
+use bevy_math::IVec2;
 
 // Adapted from: https://github.com/ucarion/line_intersection
 
