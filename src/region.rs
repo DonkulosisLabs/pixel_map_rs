@@ -116,6 +116,7 @@ impl<U: Unsigned + NumCast + Copy> Region<U> {
     }
 }
 
+#[allow(clippy::from_over_into)]
 impl<U: Unsigned + NumCast + Copy> Into<IRect> for Region<U> {
     #[inline]
     #[must_use]
@@ -124,6 +125,7 @@ impl<U: Unsigned + NumCast + Copy> Into<IRect> for Region<U> {
     }
 }
 
+#[allow(clippy::from_over_into)]
 impl<U: Unsigned + NumCast + Copy> Into<IRect> for &Region<U> {
     #[inline]
     #[must_use]

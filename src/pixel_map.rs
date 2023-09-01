@@ -486,7 +486,7 @@ impl<T: Copy + PartialEq, U: Unsigned + NumCast + Copy + Debug> PixelMap<T, U> {
     {
         let area = rect.width() * rect.height();
         let mut result = HashSet::with_capacity(area as usize / 4);
-        self.collect_points(&rect, offset, predicate, &mut result);
+        self.collect_points(rect, offset, predicate, &mut result);
         result
     }
 

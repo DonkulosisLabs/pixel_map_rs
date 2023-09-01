@@ -158,21 +158,6 @@ impl<T: Copy + PartialEq, U: Unsigned + NumCast + Copy + Debug> PNode<T, U> {
         }
     }
 
-    // Visit all leaf nodes.
-    pub(super) fn visit_leaves<F>(&self, visitor: &mut F)
-    where
-        F: FnMut(&PNode<T, U>),
-    {
-        match self.children {
-            Some(ref children) => {
-                for child in children.as_ref() {
-                    child.visit_nodes(visitor);
-                }
-            }
-            None => visitor(self),
-        }
-    }
-
     // Visit all leaf nodes within a given rectangle boundary.
     pub(super) fn visit_leaves_in_rect<F>(&self, rect: &IRect, visitor: &mut F, traversed: &mut u32)
     where
@@ -244,25 +229,6 @@ impl<T: Copy + PartialEq, U: Unsigned + NumCast + Copy + Debug> PNode<T, U> {
             return Some(true);
         }
         None
-    }
-
-    // This node must be known to be dirty.
-    pub(super) fn visit_dirty_leaves<F>(&self, visitor: &mut F, traversed: &mut usize)
-    where
-        F: FnMut(&PNode<T, U>),
-    {
-        *traversed += 1;
-
-        match self.children {
-            Some(ref children) => {
-                for child in children.as_ref() {
-                    if child.dirty() {
-                        child.visit_dirty_leaves(visitor, traversed);
-                    }
-                }
-            }
-            None => visitor(self),
-        }
     }
 
     // This node must be known to be dirty.
