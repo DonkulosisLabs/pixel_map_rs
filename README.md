@@ -94,8 +94,6 @@ pixel_map.clear_dirty(true /*recurse*/);
   the basic operations necessary to both populate pixel data, and traverse the quad tree structure
   are provided. So, this is achievable in encompassing or accompanying code, according to the needs
   of your use case.
-* In order to simplify and optimise pixel map operations, the pixel map is always square, and the
-  number of pixels in each dimension must be a power of two.
 
 ## License
 
