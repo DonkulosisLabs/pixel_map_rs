@@ -2,7 +2,7 @@
 use serde::{Deserialize, Serialize};
 
 use super::quadrant::Quadrant;
-use glam::IVec2;
+use bevy_math::{IRect, IVec2};
 use num_traits::{NumCast, Unsigned};
 
 /// A square region defined by a bottom-left point and a size, in integer units.
@@ -50,7 +50,7 @@ impl<U: Unsigned + NumCast + Copy> Region<U> {
     #[must_use]
     pub fn end_point(&self) -> IVec2 {
         let size: i32 = num_traits::cast::cast(self.size).unwrap();
-        self.point() + size - 1
+        self.point() + size
     }
 
     /// Get the size of the region.
@@ -60,11 +60,10 @@ impl<U: Unsigned + NumCast + Copy> Region<U> {
         self.size
     }
 
-    /// Get the size of the region as a `usize`.
     #[inline]
     #[must_use]
-    pub fn size_as_usize(&self) -> usize {
-        num_traits::cast::cast(self.size).unwrap()
+    pub fn size_as<N: NumCast>(&self) -> N {
+        num_traits::cast::cast::<U, N>(self.size).unwrap()
     }
 
     /// Get the center point of the region.
@@ -114,6 +113,24 @@ impl<U: Unsigned + NumCast + Copy> Region<U> {
         let point = point.into();
         let center = num_traits::cast(self.center()).unwrap();
         Quadrant::for_point(point - self.point(), center)
+    }
+}
+
+#[allow(clippy::from_over_into)]
+impl<U: Unsigned + NumCast + Copy> Into<IRect> for Region<U> {
+    #[inline]
+    #[must_use]
+    fn into(self) -> IRect {
+        IRect::from_corners(self.point(), self.end_point())
+    }
+}
+
+#[allow(clippy::from_over_into)]
+impl<U: Unsigned + NumCast + Copy> Into<IRect> for &Region<U> {
+    #[inline]
+    #[must_use]
+    fn into(self) -> IRect {
+        IRect::from_corners(self.point(), self.end_point())
     }
 }
 

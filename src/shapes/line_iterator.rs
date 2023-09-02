@@ -1,9 +1,9 @@
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
 
-use super::{ILine, IRect};
+use super::ILine;
 use crate::Direction;
-use glam::IVec2;
+use bevy_math::{IRect, IVec2};
 
 pub fn plot_line<F>(x0: i32, y0: i32, x1: i32, y1: i32, mut plot: F)
 where
@@ -128,24 +128,24 @@ impl AxisLineIterator {
     pub fn seek_bounds(&mut self, bounds: &IRect) -> Option<IVec2> {
         let point = self.next()?;
 
-        let top = bounds.top_bounds().min(self.end.y);
-        let left = bounds.left_bounds().max(self.end.x);
-        let right = bounds.right_bounds().min(self.end.x);
-        let bottom = bounds.bottom_bounds().max(self.end.y);
+        let top = (bounds.max.y - 1).min(self.end.y);
+        let left = bounds.min.x.max(self.end.x);
+        let right = (bounds.max.x - 1).min(self.end.x);
+        let bottom = bounds.min.y.max(self.end.y);
 
         let result = match self.direction {
             Direction::North => Some(IVec2::new(point.x, top)),
             Direction::NorthEast => Some(IVec2::new(right, top)),
             Direction::NorthWest => {
                 // account for the left being inclusive and the top being exclusive
-                let left = (bounds.left_bounds() + 1).max(self.end.x);
+                let left = (bounds.min.x + 1).max(self.end.x);
                 Some(IVec2::new(left, top))
             }
             Direction::East => Some(IVec2::new(right, point.y)),
             Direction::South => Some(IVec2::new(point.x, bottom)),
             Direction::SouthEast => {
                 // account for the right being exclusive and the bottom being inclusive
-                let bottom = (bounds.bottom_bounds() + 1).max(self.end.y);
+                let bottom = (bounds.min.y + 1).max(self.end.y);
                 Some(IVec2::new(right, bottom))
             }
             Direction::SouthWest => Some(IVec2::new(left, bottom)),
@@ -230,10 +230,15 @@ impl AngleLineIterator {
     }
 
     #[inline]
+    fn contains_exclusive(bounds: &IRect, point: IVec2) -> bool {
+        (point.cmpge(bounds.min) & point.cmple(bounds.max - IVec2::ONE)).all()
+    }
+
+    #[inline]
     pub fn seek_bounds(&mut self, bounds: &IRect) -> Option<IVec2> {
         while let Some(point) = self.next() {
             if let Some(next) = self.peek() {
-                if !bounds.contains(next) {
+                if !Self::contains_exclusive(bounds, next) {
                     return Some(point);
                 }
             } else {
@@ -682,14 +687,15 @@ mod test {
                     let p = iter.seek_bounds(&op.bounds);
                     assert_eq!(
                         p, op.expected_result,
-                        "{}: Result: Line: {:?}, op: {:?}",
-                        &test_case.name, &test_case.line, op
+                        "{}: Iter: {:?} Result: Line: {:?}, op: {:?}",
+                        &test_case.name, &iter, &test_case.line, op
                     );
                     assert_eq!(
                         iter.next(),
                         op.expected_next,
-                        "{}: Next: Line: {:?}, op: {:?}",
+                        "{}: Iter: {:?} Next: Line: {:?}, op: {:?}",
                         &test_case.name,
+                        &iter,
                         &test_case.line,
                         op
                     );

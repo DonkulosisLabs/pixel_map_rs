@@ -1,7 +1,7 @@
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
 
-use glam::IVec2;
+use bevy_math::IVec2;
 
 pub const NORTH: IVec2 = IVec2 { x: 0, y: 1 };
 pub const NORTH_EAST: IVec2 = IVec2 { x: 1, y: 1 };

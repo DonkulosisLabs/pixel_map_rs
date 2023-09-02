@@ -12,7 +12,7 @@ keywords = ["pixel", "map", "image", "quadtree", "data-structure"]
 categories = ["data-structures", "multimedia::images"]
 
 [dependencies]
-glam = "^0.24.1"
+bevy_math = "^0.11.2"
 num-traits = "^0.2.16"
 serde = { version = "^1.0.180", features = ["derive"], optional = true, default-features = false }
 
@@ -21,7 +21,7 @@ criterion = "0.5.1"
 ron = "0.8"
 
 [features]
-serde = [ "dep:serde", "glam/serde" ]
+serialize = [ "dep:serde", "bevy_math/serialize" ]
 
 [[bench]]
 name = "set_pixel"

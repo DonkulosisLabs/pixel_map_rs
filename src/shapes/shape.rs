@@ -2,8 +2,8 @@
 use serde::{Deserialize, Serialize};
 
 use crate::LinePixelIterator;
-use crate::{CirclePixelIterator, ICircle, ILine, IRect, RectPixelIterator};
-use glam::IVec2;
+use crate::{CirclePixelIterator, ICircle, ILine, RectPixelIterator};
+use bevy_math::{IRect, IVec2};
 
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub enum Shape {
@@ -21,7 +21,7 @@ impl Shape {
             Shape::Point { point } => IRect::from_corners(*point, *point),
             Shape::Line { line } => line.aabb(),
             Shape::Circle { circle } => circle.aabb(),
-            Shape::Rectangle { rect } => rect.clone(),
+            Shape::Rectangle { rect } => *rect,
         }
     }
 
@@ -41,7 +41,7 @@ impl Shape {
                 iter: circle.pixels(),
             },
             Shape::Rectangle { rect } => ShapePixelIterator::Rectangle {
-                iter: rect.pixels(),
+                iter: RectPixelIterator::new(*rect),
             },
         }
     }

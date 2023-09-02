@@ -3,9 +3,8 @@ use serde::{Deserialize, Serialize};
 
 use super::line_interval::LineInterval;
 use super::line_iterator::{plot_line, LinePixelIterator};
-use super::IRect;
-use crate::Direction;
-use glam::IVec2;
+use crate::{rect_segments, Direction};
+use bevy_math::{IRect, IVec2};
 
 /// A line segment represented by two points, in integer coordinates.
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
@@ -174,7 +173,7 @@ impl ILine {
     #[inline]
     #[must_use]
     pub fn intersects_rect(&self, rect: &IRect) -> bool {
-        for seg in rect.segments() {
+        for seg in rect_segments(rect) {
             if self.intersects_line(&seg).is_some() {
                 return true;
             }
@@ -226,8 +225,8 @@ mod test {
     fn test_aabb() {
         let line = ILine::new((0, 0), (10, 10));
         let aabb = line.aabb();
-        assert_eq!(aabb.x(), 0);
-        assert_eq!(aabb.y(), 0);
+        assert_eq!(aabb.min.x, 0);
+        assert_eq!(aabb.min.y, 0);
         assert_eq!(aabb.width(), 10);
         assert_eq!(aabb.height(), 10);
     }

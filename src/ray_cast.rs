@@ -3,7 +3,7 @@ use serde::{Deserialize, Serialize};
 
 use super::ILine;
 use super::LinePixelIterator;
-use glam::IVec2;
+use bevy_math::IVec2;
 
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[derive(Debug, Default, Clone, Copy, Eq, PartialEq)]
