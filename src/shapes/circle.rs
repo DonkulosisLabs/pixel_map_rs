@@ -1,7 +1,8 @@
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
 
-use bevy_math::{IRect, IVec2};
+use crate::to_cropped_urect;
+use bevy_math::{ivec2, IRect, IVec2, URect, UVec2};
 
 /// A circle represented by a center point, in integer coordinates, and a radius.
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
@@ -72,24 +73,33 @@ impl ICircle {
     /// Get the axis-aligned bounding box of the circle.
     #[inline]
     #[must_use]
-    pub fn aabb(&self) -> IRect {
-        let size = (self.radius * 2) as i32;
-        IRect::from_center_size(self.point, IVec2::new(size, size))
+    pub fn aabb(&self) -> URect {
+        let size = self.radius * 2;
+        let irect = IRect::from_center_size(self.point, IVec2::splat(size as i32));
+        to_cropped_urect(&irect)
     }
 
     /// Get the axis-aligned largest rectangle contained within the circle.
     #[inline]
     #[must_use]
-    pub fn inner_rect(&self) -> IRect {
-        let size = (self.radius as f32 * 2f32.sqrt()) as i32;
-        IRect::from_center_size(self.point, IVec2::new(size, size))
+    pub fn inner_rect(&self) -> URect {
+        let size = (self.radius as f32 * 2f32.sqrt()) as u32;
+        let irect = IRect::from_center_size(self.point, IVec2::splat(size as i32));
+        to_cropped_urect(&irect)
     }
 
     /// Iterator over pixels in the circle.
     #[inline]
     #[must_use]
-    pub fn pixels(&self) -> CirclePixelIterator {
-        CirclePixelIterator::new(self.clone())
+    pub fn pixels(&self) -> ICirclePixelIterator {
+        ICirclePixelIterator::new(self.clone())
+    }
+
+    /// Iterator over pixels in the circle, cropped to unsigned space.
+    #[inline]
+    #[must_use]
+    pub fn cropped_pixels(&self) -> CroppedCirclePixelIterator {
+        CroppedCirclePixelIterator::from_circle(self)
     }
 }
 
@@ -111,14 +121,43 @@ impl From<&IRect> for ICircle {
     }
 }
 
+pub struct CroppedCirclePixelIterator {
+    inner: ICirclePixelIterator,
+}
+
+impl CroppedCirclePixelIterator {
+    #[inline]
+    #[must_use]
+    pub fn from_circle(circle: &ICircle) -> Self {
+        Self {
+            inner: circle.pixels(),
+        }
+    }
+}
+
+impl Iterator for CroppedCirclePixelIterator {
+    type Item = UVec2;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        loop {
+            let i = self.inner.next()?;
+            if i.x < 0 || i.y < 0 {
+                continue;
+            } else {
+                return Some(i.as_uvec2());
+            }
+        }
+    }
+}
+
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-pub struct CirclePixelIterator {
+pub struct ICirclePixelIterator {
     circle: ICircle,
     x: i32,
     y: i32,
 }
 
-impl CirclePixelIterator {
+impl ICirclePixelIterator {
     #[inline]
     #[must_use]
     pub fn new(circle: ICircle) -> Self {
@@ -129,7 +168,7 @@ impl CirclePixelIterator {
     }
 }
 
-impl Iterator for CirclePixelIterator {
+impl Iterator for ICirclePixelIterator {
     type Item = IVec2;
 
     fn next(&mut self) -> Option<Self::Item> {
@@ -150,7 +189,7 @@ impl Iterator for CirclePixelIterator {
         } else {
             let x = self.circle.x() + x;
             let y = self.circle.y() + self.y;
-            Some(IVec2::new(x, y))
+            Some(ivec2(x, y))
         }
     }
 }

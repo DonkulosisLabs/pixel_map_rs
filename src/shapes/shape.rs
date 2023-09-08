@@ -1,24 +1,24 @@
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
 
-use crate::LinePixelIterator;
-use crate::{CirclePixelIterator, ICircle, ILine, RectPixelIterator};
-use bevy_math::{IRect, IVec2};
+use crate::{CroppedCirclePixelIterator, LinePixelIterator};
+use crate::{ICircle, ULine, URectPixelIterator};
+use bevy_math::{URect, UVec2};
 
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub enum Shape {
-    Point { point: IVec2 },
-    Line { line: ILine },
+    Point { point: UVec2 },
+    Line { line: ULine },
     Circle { circle: ICircle },
-    Rectangle { rect: IRect },
+    Rectangle { rect: URect },
 }
 
 impl Shape {
     #[inline]
     #[must_use]
-    pub fn aabb(&self) -> IRect {
+    pub fn aabb(&self) -> URect {
         match self {
-            Shape::Point { point } => IRect::from_corners(*point, *point),
+            Shape::Point { point } => URect::from_corners(*point, *point),
             Shape::Line { line } => line.aabb(),
             Shape::Circle { circle } => circle.aabb(),
             Shape::Rectangle { rect } => *rect,
@@ -38,10 +38,10 @@ impl Shape {
                 iter: line.pixels(),
             },
             Shape::Circle { circle } => ShapePixelIterator::Circle {
-                iter: circle.pixels(),
+                iter: circle.cropped_pixels(),
             },
             Shape::Rectangle { rect } => ShapePixelIterator::Rectangle {
-                iter: RectPixelIterator::new(*rect),
+                iter: URectPixelIterator::new(*rect),
             },
         }
     }
@@ -51,12 +51,12 @@ impl Shape {
 pub enum ShapePixelIterator {
     Point { iter: PointPixelIterator },
     Line { iter: LinePixelIterator },
-    Circle { iter: CirclePixelIterator },
-    Rectangle { iter: RectPixelIterator },
+    Circle { iter: CroppedCirclePixelIterator },
+    Rectangle { iter: URectPixelIterator },
 }
 
 impl Iterator for ShapePixelIterator {
-    type Item = IVec2;
+    type Item = UVec2;
 
     fn next(&mut self) -> Option<Self::Item> {
         match self {
@@ -70,11 +70,11 @@ impl Iterator for ShapePixelIterator {
 
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub struct PointPixelIterator {
-    point: Option<IVec2>,
+    point: Option<UVec2>,
 }
 
 impl Iterator for PointPixelIterator {
-    type Item = IVec2;
+    type Item = UVec2;
 
     fn next(&mut self) -> Option<Self::Item> {
         self.point.take()

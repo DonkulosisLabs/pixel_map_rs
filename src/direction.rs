@@ -1,7 +1,7 @@
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
 
-use bevy_math::IVec2;
+use bevy_math::{uvec2, IVec2, UVec2};
 
 pub const NORTH: IVec2 = IVec2 { x: 0, y: 1 };
 pub const NORTH_EAST: IVec2 = IVec2 { x: 1, y: 1 };
@@ -46,8 +46,17 @@ impl Direction {
     /// Move a point in this direction by the given amount.
     #[inline]
     #[must_use]
-    pub fn move_point(&self, point: IVec2, by: i32) -> IVec2 {
-        point + self.unit() * by
+    pub fn move_point(&self, point: UVec2, by: u32) -> UVec2 {
+        match self {
+            Direction::North => uvec2(point.x, point.y + by),
+            Direction::NorthEast => uvec2(point.x + by, point.y + by),
+            Direction::NorthWest => uvec2(point.x - by, point.y + by),
+            Direction::East => uvec2(point.x + by, point.y),
+            Direction::South => uvec2(point.x, point.y - by),
+            Direction::SouthEast => uvec2(point.x + by, point.y - by),
+            Direction::SouthWest => uvec2(point.x - by, point.y - by),
+            Direction::West => uvec2(point.x - by, point.y),
+        }
     }
 
     /// Returns true if this direction is cardinal (N, E, S, W).

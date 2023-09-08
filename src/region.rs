@@ -2,7 +2,7 @@
 use serde::{Deserialize, Serialize};
 
 use super::quadrant::Quadrant;
-use bevy_math::{IRect, IVec2};
+use bevy_math::{URect, UVec2};
 use num_traits::{NumCast, Unsigned};
 
 /// A square region defined by a bottom-left point and a size, in integer units.
@@ -39,7 +39,7 @@ impl<U: Unsigned + NumCast + Copy> Region<U> {
     /// Get the bottom-left point.
     #[inline]
     #[must_use]
-    pub fn point(&self) -> IVec2 {
+    pub fn point(&self) -> UVec2 {
         let x = num_traits::cast::cast(self.x).unwrap();
         let y = num_traits::cast::cast(self.y).unwrap();
         (x, y).into()
@@ -48,8 +48,8 @@ impl<U: Unsigned + NumCast + Copy> Region<U> {
     /// Get the top-right point.
     #[inline]
     #[must_use]
-    pub fn end_point(&self) -> IVec2 {
-        let size: i32 = num_traits::cast::cast(self.size).unwrap();
+    pub fn end_point(&self) -> UVec2 {
+        let size: u32 = num_traits::cast::cast(self.size).unwrap();
         self.point() + size
     }
 
@@ -85,18 +85,18 @@ impl<U: Unsigned + NumCast + Copy> Region<U> {
     #[must_use]
     pub fn contains<P>(&self, point: P) -> bool
     where
-        P: Into<IVec2>,
+        P: Into<UVec2>,
     {
         let point = point.into();
-        let x: i32 = match num_traits::cast(self.x) {
+        let x: u32 = match num_traits::cast(self.x) {
             Some(x) => x,
             None => return false,
         };
-        let y: i32 = match num_traits::cast(self.y) {
+        let y: u32 = match num_traits::cast(self.y) {
             Some(y) => y,
             None => return false,
         };
-        let size: i32 = match num_traits::cast(self.size) {
+        let size: u32 = match num_traits::cast(self.size) {
             Some(size) => size,
             None => return false,
         };
@@ -108,29 +108,42 @@ impl<U: Unsigned + NumCast + Copy> Region<U> {
     #[must_use]
     pub fn quadrant_for<P>(&self, point: P) -> Quadrant
     where
-        P: Into<IVec2>,
+        P: Into<UVec2>,
     {
         let point = point.into();
         let center = num_traits::cast(self.center()).unwrap();
         Quadrant::for_point(point - self.point(), center)
     }
-}
 
-#[allow(clippy::from_over_into)]
-impl<U: Unsigned + NumCast + Copy> Into<IRect> for Region<U> {
     #[inline]
     #[must_use]
-    fn into(self) -> IRect {
-        IRect::from_corners(self.point(), self.end_point())
+    pub fn intersect(&self, other: &URect) -> URect {
+        let min = self.point();
+        let max = self.end_point();
+        let mut r = URect {
+            min: min.max(other.min),
+            max: max.min(other.max),
+        };
+        r.min = r.min.min(r.max);
+        r
     }
 }
 
 #[allow(clippy::from_over_into)]
-impl<U: Unsigned + NumCast + Copy> Into<IRect> for &Region<U> {
+impl<U: Unsigned + NumCast + Copy> Into<URect> for Region<U> {
     #[inline]
     #[must_use]
-    fn into(self) -> IRect {
-        IRect::from_corners(self.point(), self.end_point())
+    fn into(self) -> URect {
+        URect::from_corners(self.point(), self.end_point())
+    }
+}
+
+#[allow(clippy::from_over_into)]
+impl<U: Unsigned + NumCast + Copy> Into<URect> for &Region<U> {
+    #[inline]
+    #[must_use]
+    fn into(self) -> URect {
+        URect::from_corners(self.point(), self.end_point())
     }
 }
 

@@ -1,11 +1,9 @@
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
 
-use super::{
-    Children, ICircle, PNode, RayCast, RayCastContext, RayCastQuery, RayCastResult, Region,
-};
-use crate::{rect_points, ILine, NodePath, Quadrant, Shape};
-use bevy_math::{IRect, IVec2, UVec2};
+use super::{ICircle, PNode, RayCast, RayCastContext, RayCastQuery, RayCastResult, Region};
+use crate::{urect_points, NodePath, Shape, ULine};
+use bevy_math::{IVec2, URect, UVec2};
 use num_traits::{NumCast, Unsigned};
 use std::collections::HashSet;
 use std::fmt::{Debug, Formatter};
@@ -23,7 +21,7 @@ use std::hash::BuildHasher;
 #[derive(Clone, PartialEq)]
 pub struct PixelMap<T: Copy + PartialEq = bool, U: Unsigned + NumCast + Copy + Debug = u16> {
     root: PNode<T, U>,
-    map_size: UVec2,
+    map_rect: URect,
     pixel_size: u8,
 }
 
@@ -58,7 +56,7 @@ impl<T: Copy + PartialEq, U: Unsigned + NumCast + Copy + Debug> PixelMap<T, U> {
         let region = Region::new(zero, zero, size);
         Self {
             root: PNode::new(region, value, true),
-            map_size: *dimensions,
+            map_rect: URect::from_corners(UVec2::ZERO, *dimensions),
             pixel_size,
         }
     }
@@ -66,18 +64,15 @@ impl<T: Copy + PartialEq, U: Unsigned + NumCast + Copy + Debug> PixelMap<T, U> {
     /// Obtain the dimensions of this [PixelMap].
     #[inline]
     #[must_use]
-    pub fn map_size(&self) -> &UVec2 {
-        &self.map_size
+    pub fn map_size(&self) -> UVec2 {
+        self.map_rect.size()
     }
 
     /// Obtain the dimensions of this [PixelMap] as a rectangle.
     #[inline]
     #[must_use]
-    pub fn map_rect(&self) -> IRect {
-        IRect::from_corners(
-            (0, 0).into(),
-            (self.map_size.x as i32, self.map_size.y as i32).into(),
-        )
+    pub fn map_rect(&self) -> URect {
+        self.map_rect
     }
 
     /// Obtain the pixel size of this [PixelMap]. When a node's region is of this size, it cannot
@@ -116,8 +111,8 @@ impl<T: Copy + PartialEq, U: Unsigned + NumCast + Copy + Debug> PixelMap<T, U> {
     /// Determine if the given point is within the [PixelMap::map_size] bounds.
     #[inline]
     #[must_use]
-    pub fn contains(&self, point: IVec2) -> bool {
-        self.map_rect().contains(point)
+    pub fn contains(&self, point: UVec2) -> bool {
+        self.map_rect.contains(point)
     }
 
     /// Get the value of the pixel at the given coordinates. If the coordinates are outside the
@@ -130,7 +125,7 @@ impl<T: Copy + PartialEq, U: Unsigned + NumCast + Copy + Debug> PixelMap<T, U> {
     #[must_use]
     pub fn get_pixel<P>(&self, point: P) -> Option<T>
     where
-        P: Into<IVec2>,
+        P: Into<UVec2>,
     {
         let point = point.into();
         if self.contains(point) {
@@ -153,7 +148,7 @@ impl<T: Copy + PartialEq, U: Unsigned + NumCast + Copy + Debug> PixelMap<T, U> {
     #[must_use]
     pub fn get_path<P>(&self, point: P) -> Option<NodePath>
     where
-        P: Into<IVec2>,
+        P: Into<UVec2>,
     {
         let point = point.into();
         if self.contains(point) {
@@ -177,7 +172,7 @@ impl<T: Copy + PartialEq, U: Unsigned + NumCast + Copy + Debug> PixelMap<T, U> {
     #[inline]
     pub fn set_pixel<P>(&mut self, point: P, value: T) -> bool
     where
-        P: Into<IVec2>,
+        P: Into<UVec2>,
     {
         let point = point.into();
         if self.contains(point) {
@@ -199,7 +194,7 @@ impl<T: Copy + PartialEq, U: Unsigned + NumCast + Copy + Debug> PixelMap<T, U> {
     }
 
     #[inline]
-    pub fn draw_line(&mut self, line: &ILine, value: T) -> bool {
+    pub fn draw_line(&mut self, line: &ULine, value: T) -> bool {
         if line.intersects_rect(&self.map_rect()) {
             for p in line.pixels() {
                 self.set_pixel(p, value);
@@ -222,7 +217,7 @@ impl<T: Copy + PartialEq, U: Unsigned + NumCast + Copy + Debug> PixelMap<T, U> {
     /// If the rectangle does not overlap
     /// the region covered by this [PixelMap], false is returned. Otherwise, true is returned.
     #[inline]
-    pub fn draw_rect(&mut self, rect: &IRect, value: T) -> bool {
+    pub fn draw_rect(&mut self, rect: &URect, value: T) -> bool {
         let rect = rect.intersect(self.map_rect());
         if rect.is_empty() {
             return false;
@@ -266,7 +261,7 @@ impl<T: Copy + PartialEq, U: Unsigned + NumCast + Copy + Debug> PixelMap<T, U> {
     #[inline]
     pub fn visit<F>(&self, mut visitor: F) -> u32
     where
-        F: FnMut(&PNode<T, U>, &IRect),
+        F: FnMut(&PNode<T, U>, &URect),
     {
         let mut traversed = 0u32;
         self.root
@@ -286,9 +281,9 @@ impl<T: Copy + PartialEq, U: Unsigned + NumCast + Copy + Debug> PixelMap<T, U> {
     ///
     /// The number of nodes traversed.
     #[inline]
-    pub fn visit_in_rect<F>(&self, rect: &IRect, mut visitor: F) -> u32
+    pub fn visit_in_rect<F>(&self, rect: &URect, mut visitor: F) -> u32
     where
-        F: FnMut(&PNode<T, U>, &IRect),
+        F: FnMut(&PNode<T, U>, &URect),
     {
         let rect = rect.intersect(self.map_rect());
         if rect.is_empty() {
@@ -317,9 +312,9 @@ impl<T: Copy + PartialEq, U: Unsigned + NumCast + Copy + Debug> PixelMap<T, U> {
     /// `None` if `rect` does not overlap the region covered by this [PixelMap].
     #[inline]
     #[must_use]
-    pub fn any_in_rect<F>(&self, rect: &IRect, mut f: F) -> Option<bool>
+    pub fn any_in_rect<F>(&self, rect: &URect, mut f: F) -> Option<bool>
     where
-        F: FnMut(&PNode<T, U>, &IRect) -> bool,
+        F: FnMut(&PNode<T, U>, &URect) -> bool,
     {
         let rect = rect.intersect(self.map_rect());
         if rect.is_empty() {
@@ -345,9 +340,9 @@ impl<T: Copy + PartialEq, U: Unsigned + NumCast + Copy + Debug> PixelMap<T, U> {
     /// `None` if `rect` does not overlap the region covered by this [PixelMap].
     #[inline]
     #[must_use]
-    pub fn all_in_rect<F>(&self, rect: &IRect, mut f: F) -> Option<bool>
+    pub fn all_in_rect<F>(&self, rect: &URect, mut f: F) -> Option<bool>
     where
-        F: FnMut(&PNode<T, U>, &IRect) -> bool,
+        F: FnMut(&PNode<T, U>, &URect) -> bool,
     {
         let rect = rect.intersect(self.map_rect());
         if rect.is_empty() {
@@ -370,7 +365,7 @@ impl<T: Copy + PartialEq, U: Unsigned + NumCast + Copy + Debug> PixelMap<T, U> {
     #[inline]
     pub fn visit_dirty<F>(&self, mut visitor: F) -> u32
     where
-        F: FnMut(&PNode<T, U>, &IRect),
+        F: FnMut(&PNode<T, U>, &URect),
     {
         let mut traversed = 0u32;
         if self.root.dirty() {
@@ -394,9 +389,9 @@ impl<T: Copy + PartialEq, U: Unsigned + NumCast + Copy + Debug> PixelMap<T, U> {
     ///
     /// The number of nodes traversed.
     #[inline]
-    pub fn visit_dirty_in_rect<F>(&self, rect: &IRect, mut visitor: F) -> u32
+    pub fn visit_dirty_in_rect<F>(&self, rect: &URect, mut visitor: F) -> u32
     where
-        F: FnMut(&PNode<T, U>, &IRect),
+        F: FnMut(&PNode<T, U>, &URect),
     {
         let rect = rect.intersect(self.map_rect());
         if rect.is_empty() {
@@ -480,9 +475,9 @@ impl<T: Copy + PartialEq, U: Unsigned + NumCast + Copy + Debug> PixelMap<T, U> {
     /// - `predicate`: A closure that takes a reference to a leaf node, and a reference to a rectangle as parameters.
     ///   This rectangle represents the intersection of the node's region and the `rect` parameter supplied to this method.
     ///   It returns `true` if the node matches the predicate, or `false` otherwise.
-    pub fn points<F>(&self, rect: &IRect, offset: IVec2, predicate: F) -> HashSet<IVec2>
+    pub fn points<F>(&self, rect: &URect, offset: IVec2, predicate: F) -> HashSet<IVec2>
     where
-        F: FnMut(&PNode<T, U>, &IRect) -> bool,
+        F: FnMut(&PNode<T, U>, &URect) -> bool,
     {
         let area = rect.width() * rect.height();
         let mut result = HashSet::with_capacity(area as usize / 4);
@@ -504,12 +499,12 @@ impl<T: Copy + PartialEq, U: Unsigned + NumCast + Copy + Debug> PixelMap<T, U> {
     #[inline]
     pub fn collect_points<F, H>(
         &self,
-        rect: &IRect,
+        rect: &URect,
         offset: IVec2,
         mut predicate: F,
         hash: &mut HashSet<IVec2, H>,
     ) where
-        F: FnMut(&PNode<T, U>, &IRect) -> bool,
+        F: FnMut(&PNode<T, U>, &URect) -> bool,
         H: BuildHasher,
     {
         let rect = rect.intersect(self.map_rect());
@@ -519,8 +514,8 @@ impl<T: Copy + PartialEq, U: Unsigned + NumCast + Copy + Debug> PixelMap<T, U> {
         self.visit_in_rect(&rect, |node, sub_rect| {
             debug_assert!(!sub_rect.is_empty());
             if predicate(node, sub_rect) {
-                for p in rect_points(sub_rect) {
-                    hash.insert(p + offset);
+                for p in urect_points(sub_rect) {
+                    hash.insert(p.as_ivec2() + offset);
                 }
             }
         });
@@ -633,17 +628,17 @@ impl<T: Copy + PartialEq, U: Unsigned + NumCast + Copy + Debug> PixelMap<T, U> {
     /// ```
     pub fn combine<P, F>(&mut self, other: &Self, offset: P, combiner: F)
     where
-        P: Into<IVec2>,
+        P: Into<UVec2>,
         F: Fn(&T, &T) -> T,
     {
         let offset = offset.into();
-        let mut updates: Vec<(IRect, T)> = Vec::new();
+        let mut updates: Vec<(URect, T)> = Vec::new();
         self.visit(|node, _| {
-            let mut region_rect: IRect = node.region().into();
-            region_rect = IRect::from_corners(region_rect.min + offset, region_rect.max + offset);
+            let mut region_rect: URect = node.region().into();
+            region_rect = URect::from_corners(region_rect.min + offset, region_rect.max + offset);
             other.visit_in_rect(&region_rect, |other_node, sub_rect| {
                 let value = combiner(&node.value(), &other_node.value());
-                let sub_rect = IRect::from_corners(sub_rect.min - offset, sub_rect.max - offset);
+                let sub_rect = URect::from_corners(sub_rect.min - offset, sub_rect.max - offset);
                 updates.push((sub_rect, value));
             });
         });
@@ -651,7 +646,7 @@ impl<T: Copy + PartialEq, U: Unsigned + NumCast + Copy + Debug> PixelMap<T, U> {
             self.draw_rect(&rect, color);
         }
     }
-
+    /*
     /// Take the four top-level quadrant nodes in this [PixelMap] and
     /// create separate [PixelMap]s for each quadrant. The resulting slice can be indexed
     /// by [Quadrant].
@@ -738,7 +733,7 @@ impl<T: Copy + PartialEq, U: Unsigned + NumCast + Copy + Debug> PixelMap<T, U> {
             map_size: map_size.unwrap() * 2,
             pixel_size: pixel_size.unwrap(),
         }
-    }
+    }*/
 }
 
 impl<T: Copy + PartialEq, U: Unsigned + NumCast + Copy + Debug> Debug for PixelMap<T, U> {
@@ -787,7 +782,7 @@ fn next_pow2(mut n: u32) -> u32 {
 mod test {
     use crate::pixel_map::next_pow2;
     use crate::*;
-    use bevy_math::{IRect, UVec2};
+    use bevy_math::{IRect, URect, UVec2};
 
     #[test]
     fn test_u_type_parameters() {
@@ -805,6 +800,47 @@ mod test {
         pm.clear(2);
         assert_eq!(pm.root.value(), 2);
         assert!(pm.root.children().is_none());
+    }
+
+    #[test]
+    fn test_draw_rect() {
+        let map_size = 32;
+        let mut pm = PixelMap::<bool, u32>::new(&UVec2::splat(map_size), false, 1);
+
+        for rect_width in 1..=map_size {
+            for rect_height in 1..=map_size {
+                pm.clear(false);
+
+                let rect = URect::new(0, 0, rect_width, rect_height);
+                pm.draw_rect(&rect, true);
+
+                let rect = exclusive_urect(&rect);
+                for y in 0..map_size {
+                    for x in 0..map_size {
+                        let p = (x, y).into();
+                        if rect.contains(p) {
+                            assert_eq!(
+                                pm.get_pixel(p),
+                                Some(true),
+                                "rect_width: {}, rect_height: {}, assert: {}",
+                                rect_width,
+                                rect_height,
+                                p
+                            );
+                        } else {
+                            assert_eq!(
+                                pm.get_pixel(p),
+                                Some(false),
+                                "rect_width: {}, rect_height: {}, assert: {}",
+                                rect_width,
+                                rect_height,
+                                p
+                            );
+                        }
+                    }
+                }
+            }
+        }
     }
 
     #[test]
@@ -837,7 +873,7 @@ mod test {
     #[test]
     fn test_stats_with_grandchildren() {
         let mut pm = PixelMap::<bool, u32>::new(&UVec2::splat(4), false, 1);
-        pm.draw_rect(&IRect::new(0, 0, 2, 2), true);
+        pm.draw_rect(&URect::new(0, 0, 2, 2), true);
         pm.set_pixel((0, 0), false);
         assert_eq!(
             pm.stats(),
@@ -848,7 +884,7 @@ mod test {
             }
         );
     }
-
+    /*
     #[test]
     fn test_split() {
         let mut pm = PixelMap::<i32, u32>::new(&UVec2::splat(2), 0, 1);
@@ -876,37 +912,37 @@ mod test {
         assert_eq!(pm.get_pixel((1, 1)), Some(false));
 
         assert_eq!(region1, region2);
-    }
+    }*/
 
     #[test]
     fn test_any_in_rect() {
         let mut pm = PixelMap::<bool, u32>::new(&UVec2::splat(2), false, 1);
 
         assert_eq!(
-            pm.any_in_rect(&IRect::new(0, 0, 2, 2), |n, _| n.value()),
+            pm.any_in_rect(&URect::new(0, 0, 2, 2), |n, _| n.value()),
             Some(false)
         );
         assert_eq!(
-            pm.any_in_rect(&IRect::new(2, 2, 4, 4), |n, _| n.value()),
+            pm.any_in_rect(&URect::new(2, 2, 4, 4), |n, _| n.value()),
             None
         );
 
         pm.set_pixel((0, 0), true);
 
         assert_eq!(
-            pm.any_in_rect(&IRect::new(0, 0, 2, 2), |n, _| n.value()),
+            pm.any_in_rect(&URect::new(0, 0, 2, 2), |n, _| n.value()),
             Some(true)
         );
         assert_eq!(
-            pm.any_in_rect(&IRect::new(0, 0, 2, 2), |n, _| !n.value()),
+            pm.any_in_rect(&URect::new(0, 0, 2, 2), |n, _| !n.value()),
             Some(true)
         );
         assert_eq!(
-            pm.any_in_rect(&IRect::new(0, 0, 1, 1), |n, _| n.value()),
+            pm.any_in_rect(&URect::new(0, 0, 1, 1), |n, _| n.value()),
             Some(true)
         );
         assert_eq!(
-            pm.any_in_rect(&IRect::new(1, 1, 2, 2), |n, _| n.value()),
+            pm.any_in_rect(&URect::new(1, 1, 2, 2), |n, _| n.value()),
             Some(false)
         );
     }
@@ -916,30 +952,30 @@ mod test {
         let mut pm = PixelMap::<bool, u32>::new(&UVec2::splat(2), false, 1);
 
         assert_eq!(
-            pm.all_in_rect(&IRect::new(0, 0, 2, 2), |n, _| !n.value()),
+            pm.all_in_rect(&URect::new(0, 0, 2, 2), |n, _| !n.value()),
             Some(true)
         );
         assert_eq!(
-            pm.all_in_rect(&IRect::new(2, 2, 4, 4), |n, _| n.value()),
+            pm.all_in_rect(&URect::new(2, 2, 4, 4), |n, _| n.value()),
             None
         );
 
         pm.set_pixel((0, 0), true);
 
         assert_eq!(
-            pm.all_in_rect(&IRect::new(0, 0, 2, 2), |n, _| n.value()),
+            pm.all_in_rect(&URect::new(0, 0, 2, 2), |n, _| n.value()),
             Some(false)
         );
         assert_eq!(
-            pm.all_in_rect(&IRect::new(0, 0, 2, 2), |n, _| !n.value()),
+            pm.all_in_rect(&URect::new(0, 0, 2, 2), |n, _| !n.value()),
             Some(false)
         );
         assert_eq!(
-            pm.all_in_rect(&IRect::new(0, 0, 1, 1), |n, _| n.value()),
+            pm.all_in_rect(&URect::new(0, 0, 1, 1), |n, _| n.value()),
             Some(true)
         );
         assert_eq!(
-            pm.all_in_rect(&IRect::new(1, 1, 2, 2), |n, _| n.value()),
+            pm.all_in_rect(&URect::new(1, 1, 2, 2), |n, _| n.value()),
             Some(false)
         );
     }

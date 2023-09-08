@@ -1,8 +1,8 @@
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
 
-use super::ILine;
-use bevy_math::IVec2;
+use super::ULine;
+use bevy_math::{IVec2, UVec2};
 
 // Adapted from: https://github.com/ucarion/line_intersection
 
@@ -33,14 +33,14 @@ SOFTWARE.
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct LineInterval {
-    line: ILine,
+    line: ULine,
     interval_of_intersection: (f32, f32),
 }
 
 impl LineInterval {
     #[inline]
     #[must_use]
-    pub fn line_segment(line: ILine) -> LineInterval {
+    pub fn line_segment(line: ULine) -> LineInterval {
         LineInterval {
             line,
             interval_of_intersection: (0.0, 1.0),
@@ -49,7 +49,7 @@ impl LineInterval {
 
     #[inline]
     #[must_use]
-    pub fn ray(line: ILine) -> LineInterval {
+    pub fn ray(line: ULine) -> LineInterval {
         LineInterval {
             line,
             interval_of_intersection: (0.0, f32::INFINITY),
@@ -58,7 +58,7 @@ impl LineInterval {
 
     #[inline]
     #[must_use]
-    pub fn line(line: ILine) -> LineInterval {
+    pub fn line(line: ULine) -> LineInterval {
         LineInterval {
             line,
             interval_of_intersection: (f32::NEG_INFINITY, f32::INFINITY),
@@ -69,10 +69,10 @@ impl LineInterval {
     #[must_use]
     pub fn relate(&self, other: &LineInterval) -> LineRelation {
         // see https://stackoverflow.com/a/565282
-        let p = self.line.start();
-        let q = other.line.start();
-        let r = self.line.end() - self.line.start();
-        let s = other.line.end() - other.line.start();
+        let p = self.line.start().as_ivec2();
+        let q = other.line.start().as_ivec2();
+        let r = self.line.end().as_ivec2() - self.line.start().as_ivec2();
+        let s = other.line.end().as_ivec2() - other.line.start().as_ivec2();
 
         let r_cross_s = Self::cross(&r, (s.x as f32, s.y as f32));
         let q_minus_p = q - p;
@@ -101,7 +101,7 @@ impl LineInterval {
 
             if t_in_range && u_in_range {
                 // there is an intersection
-                LineRelation::DivergentIntersecting(Self::t_coord_to_point(p, r, t))
+                LineRelation::DivergentIntersecting(Self::t_coord_to_point(p, r, t).as_uvec2())
             } else {
                 // there is no intersection
                 LineRelation::DivergentDisjoint
@@ -132,7 +132,7 @@ impl LineInterval {
 pub enum LineRelation {
     /// The line intervals are not parallel (or anti-parallel), and "meet" each other at exactly
     /// one point.
-    DivergentIntersecting(IVec2),
+    DivergentIntersecting(UVec2),
     /// The line intervals are not parallel (or anti-parallel), and do not intersect; they "miss"
     /// each other.
     DivergentDisjoint,
@@ -146,7 +146,7 @@ pub enum LineRelation {
 impl LineRelation {
     #[inline]
     #[must_use]
-    pub fn unique_intersection(self) -> Option<IVec2> {
+    pub fn unique_intersection(self) -> Option<UVec2> {
         match self {
             LineRelation::DivergentIntersecting(p) => Some(p),
             _ => None,
@@ -160,8 +160,8 @@ mod tests {
 
     #[test]
     fn divergent_intersecting_segments() {
-        let a = ILine::new((100, 0), (100, 100));
-        let b = ILine::new((0, 0), (200, 50));
+        let a = ULine::new((100, 0), (100, 100));
+        let b = ULine::new((0, 0), (200, 50));
         let s1 = LineInterval::line_segment(a);
         let s2 = LineInterval::line_segment(b);
         let relation = LineRelation::DivergentIntersecting((100, 25).into());
@@ -172,8 +172,8 @@ mod tests {
 
     #[test]
     fn divergent_intersecting_segment_and_ray() {
-        let a = ILine::new((0, 0), (100, 100));
-        let b = ILine::new((200, 0), (200, 300));
+        let a = ULine::new((0, 0), (100, 100));
+        let b = ULine::new((200, 0), (200, 300));
         let s1 = LineInterval::ray(a);
         let s2 = LineInterval::line_segment(b);
         let relation = LineRelation::DivergentIntersecting((200, 200).into());
@@ -184,8 +184,8 @@ mod tests {
 
     #[test]
     fn divergent_disjoint_segments() {
-        let a = ILine::new((0, 0), (100, 100));
-        let b = ILine::new((300, 0), (0, 300));
+        let a = ULine::new((0, 0), (100, 100));
+        let b = ULine::new((300, 0), (0, 300));
         let s1 = LineInterval::line_segment(a);
         let s2 = LineInterval::line_segment(b);
         let relation = LineRelation::DivergentDisjoint;
@@ -196,8 +196,8 @@ mod tests {
 
     #[test]
     fn divergent_disjoint_ray_and_line() {
-        let a = ILine::new((100, 100), (0, 0));
-        let b = ILine::new((300, 0), (0, 300));
+        let a = ULine::new((100, 100), (0, 0));
+        let b = ULine::new((300, 0), (0, 300));
         let s1 = LineInterval::ray(a);
         let s2 = LineInterval::line(b);
         let relation = LineRelation::DivergentDisjoint;
@@ -208,8 +208,8 @@ mod tests {
 
     #[test]
     fn parallel_disjoint_segments() {
-        let a = ILine::new((0, 0), (100, 100));
-        let b = ILine::new((0, 100), (100, 200));
+        let a = ULine::new((0, 0), (100, 100));
+        let b = ULine::new((0, 100), (100, 200));
         let s1 = LineInterval::line(a);
         let s2 = LineInterval::line(b);
         let relation = LineRelation::Parallel;
@@ -220,8 +220,8 @@ mod tests {
 
     #[test]
     fn collinear_overlapping_segment_and_line() {
-        let a = ILine::new((0, 0), (0, 150));
-        let b = ILine::new((0, 400), (0, 500));
+        let a = ULine::new((0, 0), (0, 150));
+        let b = ULine::new((0, 400), (0, 500));
         let s1 = LineInterval::line(a);
         let s2 = LineInterval::ray(b);
         let relation = LineRelation::Collinear;
