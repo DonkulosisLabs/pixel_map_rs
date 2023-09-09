@@ -2,7 +2,7 @@
 use serde::{Deserialize, Serialize};
 
 use super::{ICircle, PNode, RayCast, RayCastContext, RayCastQuery, RayCastResult, Region};
-use crate::{urect_points, Children, NodePath, Quadrant, Shape, ULine};
+use crate::{urect_points, NodePath, Shape, ULine};
 use bevy_math::{IVec2, URect, UVec2};
 use num_traits::{NumCast, Unsigned};
 use std::collections::HashSet;

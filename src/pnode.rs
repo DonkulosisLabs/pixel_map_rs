@@ -31,28 +31,6 @@ impl<T: Copy + PartialEq, U: Unsigned + NumCast + Copy + Debug> PNode<T, U> {
         }
     }
 
-    #[inline]
-    #[must_use]
-    pub(super) fn with_children(children: Children<T, U>, dirty: bool) -> Self {
-        let mut rect: URect = children[0].region().into();
-        for child in &children[1..] {
-            rect = rect.union(child.region().into());
-        }
-        assert_eq!(rect.width(), rect.height());
-        let region = Region::new(
-            num_traits::cast::cast(rect.min.x).unwrap(),
-            num_traits::cast::cast(rect.min.y).unwrap(),
-            num_traits::cast::cast(rect.width()).unwrap(),
-        );
-
-        Self {
-            region,
-            value: children[0].value(),
-            children: Some(children),
-            dirty,
-        }
-    }
-
     /// Obtain the region represented by this node.
     #[inline]
     #[must_use]
@@ -116,15 +94,6 @@ impl<T: Copy + PartialEq, U: Unsigned + NumCast + Copy + Debug> PNode<T, U> {
             Some(children) => children.get_mut(quadrant as usize),
             None => None,
         }
-    }
-
-    // Take the children of this node, making it a leaf node, having a value of whatever
-    // was in effect at the time it was subdivided into child nodes. This marks the node as dirty.
-    #[inline]
-    #[must_use]
-    pub(super) fn take_children(&mut self) -> Option<Children<T, U>> {
-        self.dirty = true;
-        self.children.take()
     }
 
     /// Determine if this node is a leaf node. Leaves don't have children.
