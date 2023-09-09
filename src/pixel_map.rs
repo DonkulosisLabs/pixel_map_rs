@@ -2,7 +2,7 @@
 use serde::{Deserialize, Serialize};
 
 use super::{ICircle, PNode, RayCast, RayCastContext, RayCastQuery, RayCastResult, Region};
-use crate::{urect_points, NodePath, Shape, ULine};
+use crate::{urect_points, Children, NodePath, Quadrant, Shape, ULine};
 use bevy_math::{IVec2, URect, UVec2};
 use num_traits::{NumCast, Unsigned};
 use std::collections::HashSet;
@@ -576,7 +576,7 @@ impl<T: Copy + PartialEq, U: Unsigned + NumCast + Copy + Debug> PixelMap<T, U> {
         stats
     }
 
-    /// Combine another [PixelMap] with this one using a function that decides how to combine
+    /// Combine another [PixelMap] with this one using a closure that decides how to combine
     /// the values of each pixel. This [PixelMap]'s region should overlap with the other [PixelMap]'s region,
     /// otherwise this operation has no effect.
     ///
@@ -646,94 +646,6 @@ impl<T: Copy + PartialEq, U: Unsigned + NumCast + Copy + Debug> PixelMap<T, U> {
             self.draw_rect(&rect, color);
         }
     }
-    /*
-    /// Take the four top-level quadrant nodes in this [PixelMap] and
-    /// create separate [PixelMap]s for each quadrant. The resulting slice can be indexed
-    /// by [Quadrant].
-    ///
-    /// # Returns
-    ///
-    /// `Some` of a slice of four [PixelMap]s, one for each quadrant, if the top level node in this [PixelMap]
-    /// has children. Otherwise, returns `None`.
-    #[must_use]
-    #[inline]
-    pub fn split(mut self) -> Option<[PixelMap<T, U>; 4]> {
-        let quarter_map_size = self.map_size / 2;
-        match self.root.take_children() {
-            Some(children) => {
-                let result: [PixelMap<T, U>; 4] = children.map(|c| PixelMap {
-                    root: c,
-                    map_size: quarter_map_size,
-                    pixel_size: self.pixel_size,
-                });
-                Some(result)
-            }
-            None => None,
-        }
-    }
-
-    /// Join the given four quadrant [PixelMap]s into a single [PixelMap].
-    /// If any of the quadrant [PixelMap]s are dirty, the resulting [PixelMap] will be dirty.
-    ///
-    /// # Parameters
-    ///
-    /// - `quads`: The four quadrant [PixelMap]s to join. The regions of the four quadrant [PixelMap]s must
-    ///   be the same size and must be offset such that they meet each other with no gaps or overlap.
-    ///
-    /// # Returns
-    ///
-    /// A new [PixelMap] that contains the four quadrant [PixelMap]s.
-    ///
-    /// # Panics
-    ///
-    /// - If the four quadrant [PixelMap]s have different pixel sizes.
-    /// - If the four quadrant [PixelMap]s are different sizes.
-    /// - If the four quadrant [PixelMap]s are not positioned in the `quads` slice according to [Quadrant].
-    #[must_use]
-    #[inline]
-    pub fn join(quads: [PixelMap<T, U>; 4]) -> Self {
-        let mut size: Option<u32> = None;
-        let mut map_size: Option<UVec2> = None;
-        let mut pixel_size: Option<u8> = None;
-        let mut dirty = false;
-        for pm in &quads {
-            let quad_size: u32 = num_traits::cast::cast(pm.root.region().size()).unwrap();
-            if let Some(s) = size {
-                assert_eq!(s, quad_size);
-            } else {
-                size = Some(quad_size);
-            }
-            if let Some(ms) = map_size {
-                assert_eq!(ms, pm.map_size);
-            } else {
-                map_size = Some(pm.map_size);
-            }
-            if let Some(ps) = pixel_size {
-                assert_eq!(ps, pm.pixel_size);
-            } else {
-                pixel_size = Some(pm.pixel_size);
-            }
-            dirty = dirty || pm.root.dirty();
-        }
-
-        let bl = quads[Quadrant::BottomLeft as usize].root.region();
-        let br = quads[Quadrant::BottomRight as usize].root.region();
-        let tl = quads[Quadrant::TopLeft as usize].root.region();
-        let tr = quads[Quadrant::TopRight as usize].root.region();
-        assert_eq!(bl.x() + bl.size(), br.x());
-        assert_eq!(tl.x() + tl.size(), tr.x());
-        assert_eq!(bl.y() + bl.size(), tl.y());
-        assert_eq!(br.y() + br.size(), tr.y());
-
-        let children: Children<T, U> = Box::new(quads.map(|pm| pm.root));
-        let root = PNode::with_children(children, dirty);
-
-        Self {
-            root,
-            map_size: map_size.unwrap() * 2,
-            pixel_size: pixel_size.unwrap(),
-        }
-    }*/
 }
 
 impl<T: Copy + PartialEq, U: Unsigned + NumCast + Copy + Debug> Debug for PixelMap<T, U> {
@@ -884,35 +796,6 @@ mod test {
             }
         );
     }
-    /*
-    #[test]
-    fn test_split() {
-        let mut pm = PixelMap::<i32, u32>::new(&UVec2::splat(2), 0, 1);
-        pm.set_pixel((0, 0), 1);
-        assert!(pm.root.children().is_some());
-        let children = pm.split().unwrap();
-        assert_eq!(children[Quadrant::BottomLeft as usize].root.value(), 1);
-        assert_eq!(children[Quadrant::BottomRight as usize].root.value(), 0);
-        assert_eq!(children[Quadrant::TopLeft as usize].root.value(), 0);
-        assert_eq!(children[Quadrant::TopRight as usize].root.value(), 0);
-    }
-
-    #[test]
-    fn test_join() {
-        let mut pm = PixelMap::<bool, u32>::new(&UVec2::splat(2), false, 1);
-        let region1 = pm.root.region().clone();
-        pm.set_pixel((0, 0), true);
-        let children = pm.split().unwrap();
-
-        let pm = PixelMap::join(children);
-        let region2 = pm.root.region().clone();
-        assert_eq!(pm.get_pixel((0, 0)), Some(true));
-        assert_eq!(pm.get_pixel((0, 1)), Some(false));
-        assert_eq!(pm.get_pixel((1, 0)), Some(false));
-        assert_eq!(pm.get_pixel((1, 1)), Some(false));
-
-        assert_eq!(region1, region2);
-    }*/
 
     #[test]
     fn test_any_in_rect() {
