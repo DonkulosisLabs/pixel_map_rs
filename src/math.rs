@@ -5,9 +5,7 @@ use bevy_math::{uvec2, IRect, IVec2, URect, UVec2};
 #[inline]
 #[must_use]
 pub fn distance_squared_to(a: UVec2, b: UVec2) -> f32 {
-    let x = b.x as f32 - a.x as f32;
-    let y = b.y as f32 - a.y as f32;
-    (x * x + y * y).abs()
+    a.as_vec2().distance_squared(b.as_vec2())
 }
 
 /// Find the distance between two points.

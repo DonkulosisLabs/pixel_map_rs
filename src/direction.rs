@@ -47,16 +47,7 @@ impl Direction {
     #[inline]
     #[must_use]
     pub fn move_point(&self, point: UVec2, by: u32) -> UVec2 {
-        match self {
-            Direction::North => uvec2(point.x, point.y + by),
-            Direction::NorthEast => uvec2(point.x + by, point.y + by),
-            Direction::NorthWest => uvec2(point.x - by, point.y + by),
-            Direction::East => uvec2(point.x + by, point.y),
-            Direction::South => uvec2(point.x, point.y - by),
-            Direction::SouthEast => uvec2(point.x + by, point.y - by),
-            Direction::SouthWest => uvec2(point.x - by, point.y - by),
-            Direction::West => uvec2(point.x - by, point.y),
-        }
+        (point.as_ivec2() + self.unit() * by as i32).as_uvec2()
     }
 
     /// Returns true if this direction is cardinal (N, E, S, W).
