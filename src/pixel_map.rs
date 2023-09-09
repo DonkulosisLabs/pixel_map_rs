@@ -694,7 +694,7 @@ fn next_pow2(mut n: u32) -> u32 {
 mod test {
     use crate::pixel_map::next_pow2;
     use crate::*;
-    use bevy_math::{IRect, URect, UVec2};
+    use bevy_math::{URect, UVec2};
 
     #[test]
     fn test_u_type_parameters() {

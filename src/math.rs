@@ -59,6 +59,9 @@ pub fn to_cropped_urect(rect: &IRect) -> URect {
 #[inline]
 #[must_use]
 pub fn exclusive_urect(rect: &URect) -> URect {
+    if rect.is_empty() || rect.max.x == 0 || rect.max.y == 0 {
+        return *rect;
+    }
     let max = rect.max - UVec2::ONE;
     URect::from_corners(rect.min, max.max(rect.min))
 }
