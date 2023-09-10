@@ -1,4 +1,4 @@
-use bevy_math::{IRect, UVec2};
+use bevy_math::{URect, UVec2};
 use pixel_map::PixelMap;
 
 const MAP_SIZE: u32 = 4;
@@ -34,7 +34,7 @@ fn main() {
     // | f | f |       |
     // +---+---+---+---+
 
-    pixel_map.draw_rect(&IRect::from_corners((2, 2).into(), (6, 6).into()), true);
+    pixel_map.draw_rect(&URect::from_corners((2, 2).into(), (6, 6).into()), true);
 
     // pixel_map state:
     // +---+---+---+---+
@@ -47,7 +47,7 @@ fn main() {
     // | f | f |       |
     // +---+---+---+---+
 
-    pixel_map.draw_rect(&IRect::from_corners((0, 0).into(), (4, 4).into()), true);
+    pixel_map.draw_rect(&URect::from_corners((0, 0).into(), (4, 4).into()), true);
 
     // pixel_map state:
     // +---+---+---+---+

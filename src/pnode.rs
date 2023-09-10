@@ -2,8 +2,8 @@
 use serde::{Deserialize, Serialize};
 
 use super::{ICircle, Quadrant, RayCast, RayCastContext, RayCastQuery, RayCastResult, Region};
-use crate::{distance_to, NodePath};
-use bevy_math::{IRect, IVec2};
+use crate::{distance_to, exclusive_urect, NodePath};
+use bevy_math::{URect, UVec2};
 use num_traits::{NumCast, Unsigned};
 use std::fmt::Debug;
 
@@ -27,28 +27,6 @@ impl<T: Copy + PartialEq, U: Unsigned + NumCast + Copy + Debug> PNode<T, U> {
             region,
             value,
             children: None,
-            dirty,
-        }
-    }
-
-    #[inline]
-    #[must_use]
-    pub(super) fn with_children(children: Children<T, U>, dirty: bool) -> Self {
-        let mut rect: IRect = children[0].region().into();
-        for child in &children[1..] {
-            rect = rect.union(child.region().into());
-        }
-        assert_eq!(rect.width(), rect.height());
-        let region = Region::new(
-            num_traits::cast::cast(rect.min.x).unwrap(),
-            num_traits::cast::cast(rect.min.y).unwrap(),
-            num_traits::cast::cast(rect.width()).unwrap(),
-        );
-
-        Self {
-            region,
-            value: children[0].value(),
-            children: Some(children),
             dirty,
         }
     }
@@ -118,15 +96,6 @@ impl<T: Copy + PartialEq, U: Unsigned + NumCast + Copy + Debug> PNode<T, U> {
         }
     }
 
-    // Take the children of this node, making it a leaf node, having a value of whatever
-    // was in effect at the time it was subdivided into child nodes. This marks the node as dirty.
-    #[inline]
-    #[must_use]
-    pub(super) fn take_children(&mut self) -> Option<Children<T, U>> {
-        self.dirty = true;
-        self.children.take()
-    }
-
     /// Determine if this node is a leaf node. Leaves don't have children.
     #[inline]
     #[must_use]
@@ -159,14 +128,13 @@ impl<T: Copy + PartialEq, U: Unsigned + NumCast + Copy + Debug> PNode<T, U> {
     }
 
     // Visit all leaf nodes within a given rectangle boundary.
-    pub(super) fn visit_leaves_in_rect<F>(&self, rect: &IRect, visitor: &mut F, traversed: &mut u32)
+    pub(super) fn visit_leaves_in_rect<F>(&self, rect: &URect, visitor: &mut F, traversed: &mut u32)
     where
-        F: FnMut(&PNode<T, U>, &IRect),
+        F: FnMut(&PNode<T, U>, &URect),
     {
         *traversed += 1;
 
-        let my_rect: IRect = self.region().into();
-        let sub_rect = my_rect.intersect(*rect);
+        let sub_rect = self.region().intersect(rect);
         if !sub_rect.is_empty() {
             match self.children {
                 Some(ref children) => {
@@ -179,12 +147,11 @@ impl<T: Copy + PartialEq, U: Unsigned + NumCast + Copy + Debug> PNode<T, U> {
         }
     }
 
-    pub(super) fn any_leaves_in_rect<F>(&self, rect: &IRect, f: &mut F) -> Option<bool>
+    pub(super) fn any_leaves_in_rect<F>(&self, rect: &URect, f: &mut F) -> Option<bool>
     where
-        F: FnMut(&PNode<T, U>, &IRect) -> bool,
+        F: FnMut(&PNode<T, U>, &URect) -> bool,
     {
-        let my_rect: IRect = self.region().into();
-        let sub_rect = my_rect.intersect(*rect);
+        let sub_rect = self.region().intersect(rect);
         if !sub_rect.is_empty() {
             match self.children {
                 Some(ref children) => {
@@ -205,12 +172,11 @@ impl<T: Copy + PartialEq, U: Unsigned + NumCast + Copy + Debug> PNode<T, U> {
         None
     }
 
-    pub(super) fn all_leaves_in_rect<F>(&self, rect: &IRect, f: &mut F) -> Option<bool>
+    pub(super) fn all_leaves_in_rect<F>(&self, rect: &URect, f: &mut F) -> Option<bool>
     where
-        F: FnMut(&PNode<T, U>, &IRect) -> bool,
+        F: FnMut(&PNode<T, U>, &URect) -> bool,
     {
-        let my_rect: IRect = self.region().into();
-        let sub_rect = my_rect.intersect(*rect);
+        let sub_rect = self.region().intersect(rect);
         if !sub_rect.is_empty() {
             match self.children {
                 Some(ref children) => {
@@ -234,16 +200,15 @@ impl<T: Copy + PartialEq, U: Unsigned + NumCast + Copy + Debug> PNode<T, U> {
     // This node must be known to be dirty.
     pub(super) fn visit_dirty_leaves_in_rect<F>(
         &self,
-        rect: &IRect,
+        rect: &URect,
         visitor: &mut F,
         traversed: &mut u32,
     ) where
-        F: FnMut(&PNode<T, U>, &IRect),
+        F: FnMut(&PNode<T, U>, &URect),
     {
         *traversed += 1;
 
-        let my_rect: IRect = self.region().into();
-        let sub_rect = my_rect.intersect(*rect);
+        let sub_rect = self.region().intersect(rect);
         if !sub_rect.is_empty() {
             match self.children {
                 Some(ref children) => {
@@ -282,7 +247,7 @@ impl<T: Copy + PartialEq, U: Unsigned + NumCast + Copy + Debug> PNode<T, U> {
     // known to be within the bounds of this node.
     #[inline]
     #[must_use]
-    pub(super) fn find_node(&self, point: IVec2) -> &PNode<T, U> {
+    pub(super) fn find_node(&self, point: UVec2) -> &PNode<T, U> {
         let mut node = self;
         loop {
             if let Some(children) = &node.children {
@@ -296,7 +261,7 @@ impl<T: Copy + PartialEq, U: Unsigned + NumCast + Copy + Debug> PNode<T, U> {
 
     #[inline]
     #[must_use]
-    pub(super) fn node_path(&self, point: IVec2) -> (&PNode<T, U>, NodePath) {
+    pub(super) fn node_path(&self, point: UVec2) -> (&PNode<T, U>, NodePath) {
         let mut depth = 0;
         let mut node = self;
         let mut path = 0;
@@ -386,7 +351,7 @@ impl<T: Copy + PartialEq, U: Unsigned + NumCast + Copy + Debug> PNode<T, U> {
         }
     }
 
-    pub(super) fn set_pixel(&mut self, point: IVec2, pixel_size: u8, value: T) -> bool {
+    pub(super) fn set_pixel(&mut self, point: UVec2, pixel_size: u8, value: T) -> bool {
         if self.region.contains(point) {
             if self.is_leaf() && value == self.value {
                 return true;
@@ -405,11 +370,11 @@ impl<T: Copy + PartialEq, U: Unsigned + NumCast + Copy + Debug> PNode<T, U> {
         false
     }
 
-    pub(super) fn draw_rect(&mut self, rect: &IRect, pixel_size: u8, value: T) {
+    pub(super) fn draw_rect(&mut self, rect: &URect, pixel_size: u8, value: T) {
         if self.contained_by_rect(rect) {
             self.set_value(value);
         } else {
-            let sub_rect = rect.intersect(self.region().into());
+            let sub_rect = self.region().intersect(rect);
             if !sub_rect.is_empty() {
                 if self.is_leaf() && value == self.value {
                     return;
@@ -435,9 +400,10 @@ impl<T: Copy + PartialEq, U: Unsigned + NumCast + Copy + Debug> PNode<T, U> {
         let inner_rect = circle.inner_rect();
         if self.contained_by_rect(&inner_rect) {
             self.set_value(value);
-        } else if !outer_rect.intersect(self.region().into()).is_empty() {
+        } else if !self.region().intersect(&outer_rect).is_empty() {
             self.draw_rect(&inner_rect, pixel_size, value);
-            for p in circle.pixels() {
+            let inner_rect = exclusive_urect(&inner_rect);
+            for p in circle.cropped_pixels() {
                 if inner_rect.contains(p) {
                     continue;
                 }
@@ -448,7 +414,7 @@ impl<T: Copy + PartialEq, U: Unsigned + NumCast + Copy + Debug> PNode<T, U> {
 
     #[inline]
     #[must_use]
-    fn contained_by_rect(&self, rect: &IRect) -> bool {
+    fn contained_by_rect(&self, rect: &URect) -> bool {
         rect.contains(self.region.point()) && rect.contains(self.region.end_point())
     }
 
@@ -704,7 +670,7 @@ mod test {
     #[test]
     fn test_set_rect_full() {
         let mut n = PNode::new(Region::new(0u32, 0, 2), false, false);
-        n.draw_rect(&IRect::new(0, 0, 2, 2), 1, true);
+        n.draw_rect(&URect::new(0, 0, 2, 2), 1, true);
         assert!(n.value);
         assert!(n.children.is_none());
     }
@@ -712,7 +678,7 @@ mod test {
     #[test]
     fn test_set_rect_contained() {
         let mut n = PNode::new(Region::new(0u32, 0, 2), false, false);
-        n.draw_rect(&IRect::new(0, 0, 1, 1), 1, true);
+        n.draw_rect(&URect::new(0, 0, 1, 1), 1, true);
         assert!(n.children.is_some());
         assert!(n.children.as_ref().unwrap()[Quadrant::BottomLeft as usize].value);
     }
@@ -752,10 +718,10 @@ mod test {
         let n = PNode::new(Region::new(0u32, 0, 2), false, false);
         let mut traversed = 0;
         n.visit_leaves_in_rect(
-            &IRect::new(0, 0, 1, 2),
+            &URect::new(0, 0, 1, 2),
             &mut |node, sub_rect| {
                 assert!(node.is_leaf());
-                assert_eq!(sub_rect, &IRect::new(0, 0, 1, 2));
+                assert_eq!(sub_rect, &URect::new(0, 0, 1, 2));
             },
             &mut traversed,
         );

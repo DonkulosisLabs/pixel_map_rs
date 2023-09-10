@@ -1,20 +1,20 @@
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
 
-use super::ILine;
 use super::LinePixelIterator;
-use bevy_math::IVec2;
+use super::ULine;
+use bevy_math::UVec2;
 
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[derive(Debug, Default, Clone, Copy, Eq, PartialEq)]
 pub struct RayCastQuery {
-    pub line: ILine,
+    pub line: ULine,
 }
 
 impl RayCastQuery {
     #[inline]
     #[must_use]
-    pub fn new(line: ILine) -> Self {
+    pub fn new(line: ULine) -> Self {
         Self { line }
     }
 }
@@ -22,7 +22,7 @@ impl RayCastQuery {
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct RayCastResult {
-    pub collision_point: Option<IVec2>,
+    pub collision_point: Option<UVec2>,
     pub distance: f32,
     pub traversed: u32,
 }

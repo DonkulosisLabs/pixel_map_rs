@@ -2,7 +2,7 @@
 use serde::{Deserialize, Serialize};
 
 use crate::Direction;
-use bevy_math::IVec2;
+use bevy_math::UVec2;
 
 /// A quadrant in a box.
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
@@ -18,9 +18,9 @@ impl Quadrant {
     /// Returns the quadrant for the given point in relation to the given center point.
     #[inline]
     #[must_use]
-    pub fn for_point<P>(point: P, center: i32) -> Quadrant
+    pub fn for_point<P>(point: P, center: u32) -> Quadrant
     where
-        P: Into<IVec2>,
+        P: Into<UVec2>,
     {
         let point = point.into();
         if point.x < center {

@@ -80,11 +80,9 @@ pixel_map.clear_dirty(true /*recurse*/);
 ## Features
 
 * Set individual pixel values, or draw primitive shapes:
-  * Lines 
+  * Lines
   * Rectangles
   * Circles
-* Split a pixel map into owned quadrants for parallel processing, and merge quadrants 
-  back into a unified pixel map.
 * Perform boolean operations against two pixel maps (i.e. union, intersection, difference, xor).
 * Tree nodes maintain a dirty state for efficiently traversing recently modified regions of the tree.
 

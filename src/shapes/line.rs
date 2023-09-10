@@ -3,21 +3,21 @@ use serde::{Deserialize, Serialize};
 
 use super::line_interval::LineInterval;
 use super::line_iterator::{plot_line, LinePixelIterator};
-use crate::{rect_segments, Direction};
-use bevy_math::{IRect, IVec2};
+use crate::{distance_squared_to, distance_to, urect_edges, Direction};
+use bevy_math::{URect, UVec2};
 
 /// A line segment represented by two points, in integer coordinates.
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
-pub struct ILine {
-    start: IVec2,
-    end: IVec2,
+pub struct ULine {
+    start: UVec2,
+    end: UVec2,
 }
 
-impl ILine {
+impl ULine {
     pub const ZERO: Self = Self {
-        start: IVec2::ZERO,
-        end: IVec2::ZERO,
+        start: UVec2::ZERO,
+        end: UVec2::ZERO,
     };
 
     /// Creates a new line with the given start and end points.
@@ -25,7 +25,7 @@ impl ILine {
     #[must_use]
     pub fn new<P>(start: P, end: P) -> Self
     where
-        P: Into<IVec2>,
+        P: Into<UVec2>,
     {
         Self {
             start: start.into(),
@@ -36,14 +36,14 @@ impl ILine {
     /// Get the start point.
     #[inline]
     #[must_use]
-    pub fn start(&self) -> IVec2 {
+    pub fn start(&self) -> UVec2 {
         self.start
     }
 
     /// Get the end point.
     #[inline]
     #[must_use]
-    pub fn end(&self) -> IVec2 {
+    pub fn end(&self) -> UVec2 {
         self.end
     }
 
@@ -71,7 +71,7 @@ impl ILine {
     /// Create a new line that is the rotation of this line around the given point, by the given radians.
     #[inline]
     #[must_use]
-    pub fn rotate_around(&self, center: IVec2, radians: f32) -> Self {
+    pub fn rotate_around(&self, center: UVec2, radians: f32) -> Self {
         let cos_theta = f32::cos(radians);
         let sin_theta = f32::sin(radians);
 
@@ -87,7 +87,7 @@ impl ILine {
         let x1 = cos_theta * end_x_diff - sin_theta * end_y_diff + center.x as f32;
         let y1 = sin_theta * end_x_diff + cos_theta * end_y_diff + center.y as f32;
 
-        Self::new((x0 as i32, y0 as i32), (x1 as i32, y1 as i32))
+        Self::new((x0 as u32, y0 as u32), (x1 as u32, y1 as u32))
     }
 
     /// Determine if the given point lies on this line.
@@ -95,7 +95,7 @@ impl ILine {
     #[must_use]
     pub fn contains<P>(&self, point: P) -> bool
     where
-        P: Into<IVec2>,
+        P: Into<UVec2>,
     {
         let point = point.into();
         let d = distance_to(self.start, point) + distance_to(point, self.end) - self.length();
@@ -112,8 +112,8 @@ impl ILine {
     /// Get the axis-aligned bounding box of this line.
     #[inline]
     #[must_use]
-    pub fn aabb(&self) -> IRect {
-        IRect::from_corners(self.start, self.end)
+    pub fn aabb(&self) -> URect {
+        URect::from_corners(self.start, self.end)
     }
 
     /// Get the axis-aligned direction of this line, if it is axis-aligned, `None` otherwise.
@@ -141,8 +141,8 @@ impl ILine {
     #[inline]
     #[must_use]
     pub fn diagonal_axis_alignment(&self) -> Option<Direction> {
-        let dx = self.end.x - self.start.x;
-        let dy = self.end.y - self.start.y;
+        let dx = self.end.x as i64 - self.start.x as i64;
+        let dy = self.end.y as i64 - self.start.y as i64;
         if dx == dy {
             if dx > 0 {
                 Some(Direction::NorthEast)
@@ -163,7 +163,7 @@ impl ILine {
     /// Determine if this line intersects the given line.
     #[inline]
     #[must_use]
-    pub fn intersects_line(&self, other: &ILine) -> Option<IVec2> {
+    pub fn intersects_line(&self, other: &ULine) -> Option<UVec2> {
         let seg1 = LineInterval::line_segment(*self);
         let seg2 = LineInterval::line_segment(*other);
         seg1.relate(&seg2).unique_intersection()
@@ -172,8 +172,8 @@ impl ILine {
     /// Determine if this line intersects the given rectangle.
     #[inline]
     #[must_use]
-    pub fn intersects_rect(&self, rect: &IRect) -> bool {
-        for seg in rect_segments(rect) {
+    pub fn intersects_rect(&self, rect: &URect) -> bool {
+        for seg in urect_edges(rect) {
             if self.intersects_line(&seg).is_some() {
                 return true;
             }
@@ -183,11 +183,19 @@ impl ILine {
 
     /// Use Bresenham's line algorithm to visit points on this line.
     #[inline]
-    pub fn visit_points<F>(&self, visitor: F)
+    pub fn visit_points<F>(&self, mut visitor: F)
     where
-        F: FnMut(i32, i32),
+        F: FnMut(u32, u32),
     {
-        plot_line(self.start.x, self.start.y, self.end.x, self.end.y, visitor);
+        plot_line(
+            self.start.x as i32,
+            self.start.y as i32,
+            self.end.x as i32,
+            self.end.y as i32,
+            |x, y| {
+                visitor(x as u32, y as u32);
+            },
+        );
     }
 
     #[inline]
@@ -197,25 +205,13 @@ impl ILine {
     }
 }
 
-#[inline]
-pub fn distance_squared_to(a: IVec2, b: IVec2) -> f32 {
-    let x = b.x as f32 - a.x as f32;
-    let y = b.y as f32 - a.y as f32;
-    (x * x + y * y).abs()
-}
-
-#[inline]
-pub fn distance_to(a: IVec2, b: IVec2) -> f32 {
-    distance_squared_to(a, b).sqrt()
-}
-
 #[cfg(test)]
 mod test {
     use super::*;
 
     #[test]
     fn test_contains() {
-        let line = ILine::new((0, 0), (10, 10));
+        let line = ULine::new((0, 0), (10, 10));
         assert!(line.contains((5, 5)));
         assert!(!line.contains((5, 6)));
         assert!(!line.contains((6, 5)));
@@ -223,7 +219,7 @@ mod test {
 
     #[test]
     fn test_aabb() {
-        let line = ILine::new((0, 0), (10, 10));
+        let line = ULine::new((0, 0), (10, 10));
         let aabb = line.aabb();
         assert_eq!(aabb.min.x, 0);
         assert_eq!(aabb.min.y, 0);
@@ -233,31 +229,31 @@ mod test {
 
     #[test]
     fn test_axis_alignment() {
-        let line = ILine::new((0, 0), (10, 10));
+        let line = ULine::new((0, 0), (10, 10));
         assert_eq!(line.axis_alignment(), None);
-        let line = ILine::new((0, 0), (10, 0));
+        let line = ULine::new((0, 0), (10, 0));
         assert_eq!(line.axis_alignment(), Some(Direction::East));
-        let line = ILine::new((0, 0), (0, 10));
+        let line = ULine::new((0, 0), (0, 10));
         assert_eq!(line.axis_alignment(), Some(Direction::North));
-        let line = ILine::new((10, 0), (0, 0));
+        let line = ULine::new((10, 0), (0, 0));
         assert_eq!(line.axis_alignment(), Some(Direction::West));
-        let line = ILine::new((0, 10), (0, 0));
+        let line = ULine::new((0, 10), (0, 0));
         assert_eq!(line.axis_alignment(), Some(Direction::South));
-        let line = ILine::new((0, 10), (1, 0));
+        let line = ULine::new((0, 10), (1, 0));
         assert_eq!(line.axis_alignment(), None);
     }
 
     #[test]
     fn test_diag_axis_alignment() {
-        let line = ILine::new((0, 0), (9, 10));
+        let line = ULine::new((0, 0), (9, 10));
         assert_eq!(line.diagonal_axis_alignment(), None);
-        let line = ILine::new((0, 0), (10, 10));
+        let line = ULine::new((0, 0), (10, 10));
         assert_eq!(line.diagonal_axis_alignment(), Some(Direction::NorthEast));
-        let line = ILine::new((0, 10), (10, 0));
+        let line = ULine::new((0, 10), (10, 0));
         assert_eq!(line.diagonal_axis_alignment(), Some(Direction::SouthEast));
-        let line = ILine::new((10, 0), (0, 10));
+        let line = ULine::new((10, 0), (0, 10));
         assert_eq!(line.diagonal_axis_alignment(), Some(Direction::NorthWest));
-        let line = ILine::new((10, 10), (0, 0));
+        let line = ULine::new((10, 10), (0, 0));
         assert_eq!(line.diagonal_axis_alignment(), Some(Direction::SouthWest));
     }
 }
