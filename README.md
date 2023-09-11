@@ -35,13 +35,9 @@ use pixel_map::PixelMap;
 struct MyColor(u8, u8, u8);
 
 let mut pixel_map = PixelMap<MyColor>::new(
-    Region::new(
-        0,   // position x
-        0,   // position y
-        1024 // size
-    ),
-    MyColor(0, 0, 0), // initial value
-    1,                // pixel size
+    &uvec2(1920, 1080), // size of the pixel map
+    MyColor(0, 0, 0),   // initial value
+    1,                  // pixel size
 );
 
 ```
@@ -53,10 +49,10 @@ let mut pixel_map = PixelMap<MyColor>::new(
 pixel_map.set_pixel((11, 12), MyColor(255, 0, 0));
 
 // Draw a line
-pixel_map.draw_line(&ILine::new((500, 500), (600, 400)), MyColor(0, 255, 0));
+pixel_map.draw_line(&ULine::new((500, 500), (600, 400)), MyColor(0, 255, 0));
 
 // Draw a rectangle
-pixel_map.draw_rect(&IRect::from_corners((200, 200), (300, 300)), MyColor(0, 0, 255));
+pixel_map.draw_rect(&URect::from_corners((200, 200), (300, 300)), MyColor(0, 0, 255));
 
 // Draw a circle
 pixel_map.draw_circle(&ICircle::new((500, 500), 100), MyColor(0, 0, 255));
