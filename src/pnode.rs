@@ -1,7 +1,7 @@
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
 
-use super::{ICircle, Quadrant, RayCast, RayCastContext, RayCastQuery, RayCastResult, Region};
+use super::{ICircle, RayCast, RayCastContext, RayCastQuery, RayCastResult, Region};
 use crate::{distance_to, exclusive_urect, NodePath};
 use bevy_math::{URect, UVec2};
 use num_traits::{NumCast, Unsigned};
@@ -9,13 +9,51 @@ use std::fmt::Debug;
 
 pub type Children<T, U> = Box<[PNode<T, U>; 4]>;
 
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[derive(Clone, Debug, PartialEq)]
+enum PNodeKind<T: Copy + PartialEq = bool, U: Unsigned + NumCast + Copy + Debug = u16> {
+    Leaf(T),
+    Branch(Children<T, U>),
+}
+
+impl<T: Copy + PartialEq, U: Unsigned + NumCast + Copy + Debug> PNodeKind<T, U> {
+    #[inline]
+    pub fn value(&self) -> &T {
+        match self {
+            PNodeKind::Leaf(value) => value,
+            PNodeKind::Branch(_) => {
+                panic!("pixel map leaf node value accessed in branch node context");
+            }
+        }
+    }
+
+    #[inline]
+    pub fn children(&self) -> &Children<T, U> {
+        match self {
+            PNodeKind::Leaf(_) => {
+                panic!("pixel map branch node children accessed in leaf node context");
+            }
+            PNodeKind::Branch(children) => children,
+        }
+    }
+
+    #[inline]
+    pub fn children_mut(&mut self) -> &mut Children<T, U> {
+        match self {
+            PNodeKind::Leaf(_) => {
+                panic!("pixel map branch node children accessed in leaf node context");
+            }
+            PNodeKind::Branch(children) => children,
+        }
+    }
+}
+
 /// A node of a [crate::PixelMap] quad tree.
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[derive(Clone, Debug, PartialEq)]
 pub struct PNode<T: Copy + PartialEq = bool, U: Unsigned + NumCast + Copy + Debug = u16> {
     region: Region<U>,
-    value: T,
-    children: Option<Children<T, U>>,
+    kind: PNodeKind<T, U>,
     dirty: bool,
 }
 
@@ -25,8 +63,7 @@ impl<T: Copy + PartialEq, U: Unsigned + NumCast + Copy + Debug> PNode<T, U> {
     pub(super) fn new(region: Region<U>, value: T, dirty: bool) -> Self {
         Self {
             region,
-            value,
-            children: None,
+            kind: PNodeKind::Leaf(value),
             dirty,
         }
     }
@@ -53,10 +90,11 @@ impl<T: Copy + PartialEq, U: Unsigned + NumCast + Copy + Debug> PNode<T, U> {
     }
 
     /// Obtain this node's value.
+    /// Panics if this node is not [Self::is_leaf()].
     #[inline]
     #[must_use]
-    pub fn value(&self) -> T {
-        self.value
+    pub fn value(&self) -> &T {
+        self.kind.value()
     }
 
     /// Set the value of this node. If this node has children, they will be discarded.
@@ -64,54 +102,38 @@ impl<T: Copy + PartialEq, U: Unsigned + NumCast + Copy + Debug> PNode<T, U> {
     #[inline]
     pub(super) fn set_value(&mut self, value: T) {
         self.dirty = true;
-        self.value = value;
-        self.children = None;
+        self.kind = PNodeKind::Leaf(value);
     }
 
-    /// Obtain an array of the children of this node. If this node has no children, None is returned.
+    /// Obtain an array of the children of this node.
+    /// Panics if this node is [Self::is_leaf()].
     #[inline]
     #[must_use]
-    pub fn children(&self) -> Option<&Children<T, U>> {
-        self.children.as_ref()
+    pub fn children(&self) -> &Children<T, U> {
+        self.kind.children()
     }
 
-    /// Get the child node in the given quadrant. If this node has no children, `None` is returned.
     #[inline]
     #[must_use]
-    pub fn child(&self, quadrant: Quadrant) -> Option<&PNode<T, U>> {
-        match &self.children {
-            Some(children) => children.get(quadrant as usize),
-            None => None,
-        }
-    }
-
-    /// Get a mutable reference to the child node in the given quadrant. If this node has no children,
-    /// `None` is returned.
-    #[inline]
-    #[must_use]
-    pub fn child_mut(&mut self, quadrant: Quadrant) -> Option<&mut PNode<T, U>> {
-        match &mut self.children {
-            Some(children) => children.get_mut(quadrant as usize),
-            None => None,
-        }
+    fn children_mut(&mut self) -> &mut Children<T, U> {
+        self.kind.children_mut()
     }
 
     /// Determine if this node is a leaf node. Leaves don't have children.
     #[inline]
     #[must_use]
     pub fn is_leaf(&self) -> bool {
-        self.children.is_none()
+        matches!(self.kind, PNodeKind::Leaf(_))
     }
 
     /// Determine if all immediate children of this node are leaf nodes.
     #[inline]
     #[must_use]
     pub fn is_leaf_parent(&self) -> bool {
-        if let Some(children) = &self.children {
-            children.iter().all(|c| c.is_leaf())
-        } else {
-            false
-        }
+        return match &self.kind {
+            PNodeKind::Leaf(_) => false,
+            PNodeKind::Branch(children) => children.iter().all(|c| c.is_leaf()),
+        };
     }
 
     // Visit all nodes.
@@ -120,7 +142,7 @@ impl<T: Copy + PartialEq, U: Unsigned + NumCast + Copy + Debug> PNode<T, U> {
         F: FnMut(&PNode<T, U>),
     {
         visitor(self);
-        if let Some(children) = &self.children {
+        if let PNodeKind::Branch(children) = &self.kind {
             for child in children.as_ref() {
                 child.visit_nodes(visitor);
             }
@@ -136,13 +158,13 @@ impl<T: Copy + PartialEq, U: Unsigned + NumCast + Copy + Debug> PNode<T, U> {
 
         let sub_rect = self.region().intersect(rect);
         if !sub_rect.is_empty() {
-            match self.children {
-                Some(ref children) => {
+            match self.kind {
+                PNodeKind::Leaf(_) => visitor(self, &sub_rect),
+                PNodeKind::Branch(ref children) => {
                     for child in children.as_ref() {
                         child.visit_leaves_in_rect(rect, visitor, traversed);
                     }
                 }
-                None => visitor(self, &sub_rect),
             }
         }
     }
@@ -153,15 +175,15 @@ impl<T: Copy + PartialEq, U: Unsigned + NumCast + Copy + Debug> PNode<T, U> {
     {
         let sub_rect = self.region().intersect(rect);
         if !sub_rect.is_empty() {
-            match self.children {
-                Some(ref children) => {
+            match self.kind {
+                PNodeKind::Branch(ref children) => {
                     for child in children.as_ref() {
                         if let Some(true) = child.any_leaves_in_rect(rect, f) {
                             return Some(true);
                         }
                     }
                 }
-                None => {
+                PNodeKind::Leaf(_) => {
                     if f(self, &sub_rect) {
                         return Some(true);
                     }
@@ -178,15 +200,15 @@ impl<T: Copy + PartialEq, U: Unsigned + NumCast + Copy + Debug> PNode<T, U> {
     {
         let sub_rect = self.region().intersect(rect);
         if !sub_rect.is_empty() {
-            match self.children {
-                Some(ref children) => {
+            match self.kind {
+                PNodeKind::Branch(ref children) => {
                     for child in children.as_ref() {
                         if let Some(false) = child.all_leaves_in_rect(rect, f) {
                             return Some(false);
                         }
                     }
                 }
-                None => {
+                PNodeKind::Leaf(_) => {
                     if !f(self, &sub_rect) {
                         return Some(false);
                     }
@@ -210,15 +232,15 @@ impl<T: Copy + PartialEq, U: Unsigned + NumCast + Copy + Debug> PNode<T, U> {
 
         let sub_rect = self.region().intersect(rect);
         if !sub_rect.is_empty() {
-            match self.children {
-                Some(ref children) => {
+            match self.kind {
+                PNodeKind::Branch(ref children) => {
                     for child in children.as_ref() {
                         if child.dirty() {
                             child.visit_dirty_leaves_in_rect(rect, visitor, traversed);
                         }
                     }
                 }
-                None => visitor(self, &sub_rect),
+                PNodeKind::Leaf(_) => visitor(self, &sub_rect),
             }
         }
     }
@@ -231,15 +253,15 @@ impl<T: Copy + PartialEq, U: Unsigned + NumCast + Copy + Debug> PNode<T, U> {
         *traversed += 1;
 
         self.clear_dirty();
-        match self.children {
-            Some(ref mut children) => {
+        match self.kind {
+            PNodeKind::Branch(ref mut children) => {
                 for child in children.as_mut() {
                     if child.dirty() {
                         child.drain_dirty_leaves(visitor, traversed);
                     }
                 }
             }
-            None => visitor(self),
+            PNodeKind::Leaf(_) => visitor(self),
         }
     }
 
@@ -250,7 +272,7 @@ impl<T: Copy + PartialEq, U: Unsigned + NumCast + Copy + Debug> PNode<T, U> {
     pub(super) fn find_node(&self, point: UVec2) -> &PNode<T, U> {
         let mut node = self;
         loop {
-            if let Some(children) = &node.children {
+            if let PNodeKind::Branch(children) = &node.kind {
                 let q = node.region.quadrant_for(point);
                 node = &children[q as usize];
             } else {
@@ -266,7 +288,7 @@ impl<T: Copy + PartialEq, U: Unsigned + NumCast + Copy + Debug> PNode<T, U> {
         let mut node = self;
         let mut path = 0;
         loop {
-            if let Some(children) = &node.children {
+            if let PNodeKind::Branch(children) = &node.kind {
                 let q = node.region.quadrant_for(point);
                 path |= (q as u64) << (depth * 2);
                 depth += 1;
@@ -294,7 +316,7 @@ impl<T: Copy + PartialEq, U: Unsigned + NumCast + Copy + Debug> PNode<T, U> {
             if depth == path_depth {
                 return Some(node);
             }
-            if let Some(children) = &node.children {
+            if let PNodeKind::Branch(children) = &node.kind {
                 let q = (*path >> (depth * 2)) & 0b11;
                 depth += 1;
                 node = &children[q as usize];
@@ -318,8 +340,8 @@ impl<T: Copy + PartialEq, U: Unsigned + NumCast + Copy + Debug> PNode<T, U> {
             ctx.traversed += 1;
             let current_point = ctx.line_iter.peek()?;
             if self.region.contains(current_point) {
-                match self.children {
-                    Some(ref children) => {
+                match self.kind {
+                    PNodeKind::Branch(ref children) => {
                         let q = self.region.quadrant_for(current_point);
                         let result = children[q as usize].ray_cast(query, ctx, visitor);
                         if result.is_some() {
@@ -327,7 +349,7 @@ impl<T: Copy + PartialEq, U: Unsigned + NumCast + Copy + Debug> PNode<T, U> {
                         }
                         continue;
                     }
-                    None => {
+                    PNodeKind::Leaf(_) => {
                         return match visitor(self) {
                             RayCast::Continue => {
                                 ctx.line_iter.seek_bounds(&self.region().into());
@@ -353,7 +375,7 @@ impl<T: Copy + PartialEq, U: Unsigned + NumCast + Copy + Debug> PNode<T, U> {
 
     pub(super) fn set_pixel(&mut self, point: UVec2, pixel_size: u8, value: T) -> bool {
         if self.region.contains(point) {
-            if self.is_leaf() && value == self.value {
+            if self.is_leaf() && &value == self.value() {
                 return true;
             }
             if self.region.is_unit(pixel_size) {
@@ -361,7 +383,7 @@ impl<T: Copy + PartialEq, U: Unsigned + NumCast + Copy + Debug> PNode<T, U> {
             } else {
                 self.subdivide();
                 let q = self.region.quadrant_for(point);
-                self.children.as_mut().unwrap()[q as usize].set_pixel(point, pixel_size, value);
+                self.children_mut()[q as usize].set_pixel(point, pixel_size, value);
                 self.decimate();
                 self.recalc_dirty();
             }
@@ -376,14 +398,14 @@ impl<T: Copy + PartialEq, U: Unsigned + NumCast + Copy + Debug> PNode<T, U> {
         } else {
             let sub_rect = self.region().intersect(rect);
             if !sub_rect.is_empty() {
-                if self.is_leaf() && value == self.value {
+                if self.is_leaf() && &value == self.value() {
                     return;
                 }
                 if self.region.is_unit(pixel_size) {
                     self.set_value(value);
                 } else {
                     self.subdivide();
-                    let children = self.children.as_mut().unwrap();
+                    let children = self.children_mut();
                     children[0].draw_rect(&sub_rect, pixel_size, value);
                     children[1].draw_rect(&sub_rect, pixel_size, value);
                     children[2].draw_rect(&sub_rect, pixel_size, value);
@@ -419,7 +441,7 @@ impl<T: Copy + PartialEq, U: Unsigned + NumCast + Copy + Debug> PNode<T, U> {
     }
 
     fn subdivide(&mut self) {
-        if self.children.is_some() {
+        if !self.is_leaf() {
             return;
         }
 
@@ -427,23 +449,16 @@ impl<T: Copy + PartialEq, U: Unsigned + NumCast + Copy + Debug> PNode<T, U> {
         let y = self.region.y();
         let half_size = self.region.center();
 
-        self.children = Some(Box::new([
-            PNode::new(Region::new(x, y, half_size), self.value, self.dirty),
-            PNode::new(
-                Region::new(x + half_size, y, half_size),
-                self.value,
-                self.dirty,
-            ),
+        let value = *self.value();
+        self.kind = PNodeKind::Branch(Box::new([
+            PNode::new(Region::new(x, y, half_size), value, self.dirty),
+            PNode::new(Region::new(x + half_size, y, half_size), value, self.dirty),
             PNode::new(
                 Region::new(x + half_size, y + half_size, half_size),
-                self.value,
+                value,
                 self.dirty,
             ),
-            PNode::new(
-                Region::new(x, y + half_size, half_size),
-                self.value,
-                self.dirty,
-            ),
+            PNode::new(Region::new(x, y + half_size, half_size), value, self.dirty),
         ]));
     }
 
@@ -452,30 +467,30 @@ impl<T: Copy + PartialEq, U: Unsigned + NumCast + Copy + Debug> PNode<T, U> {
             return;
         }
 
-        if let Some(children) = &self.children {
+        if let PNodeKind::Branch(children) = &self.kind {
             let mut all_same = true;
-            let mut c: Option<T> = None;
+            let mut c: Option<&T> = None;
 
             for child in children.iter() {
                 if let Some(color) = c {
-                    if color != child.value {
+                    if color != child.value() {
                         all_same = false;
                         break;
                     }
                 } else {
-                    c = Some(child.value);
+                    c = Some(child.value());
                 }
             }
 
             if all_same {
-                self.set_value(c.unwrap());
+                self.set_value(*c.unwrap());
             }
         }
     }
 
     #[inline]
     fn recalc_dirty(&mut self) {
-        if let Some(children) = &self.children {
+        if let PNodeKind::Branch(children) = &self.kind {
             self.dirty = children.iter().any(|child| child.dirty);
         }
     }
@@ -484,12 +499,13 @@ impl<T: Copy + PartialEq, U: Unsigned + NumCast + Copy + Debug> PNode<T, U> {
 #[cfg(test)]
 mod test {
     use super::*;
+    use crate::Quadrant;
 
     #[test]
     fn test_subdivide() {
         let mut n = PNode::new(Region::new(0u32, 0, 4), false, false);
         n.subdivide();
-        let children = n.children.unwrap();
+        let children = n.children();
         assert_eq!(
             &children[0],
             &PNode::new(Region::new(0u32, 0, 2), false, false)
@@ -512,26 +528,25 @@ mod test {
     fn test_decimate_frees_children() {
         let mut n = PNode::new(Region::new(0u32, 0, 4), false, false);
         n.subdivide();
-        assert!(n.children.is_some());
+        assert!(!n.is_leaf());
         n.decimate();
-        assert!(n.children.is_none());
+        assert!(n.is_leaf());
     }
 
     #[test]
     fn test_decimate_retains_children() {
         let mut n = PNode::new(Region::new(0u32, 0, 4), false, false);
         n.subdivide();
-        n.children.as_mut().unwrap()[0].value = true;
+        n.children_mut()[0].set_value(true);
         n.decimate();
-        assert!(!n.value);
-        assert!(n.children.is_some());
+        assert!(!n.is_leaf());
     }
 
     #[test]
     fn test_find_node() {
         let mut n = PNode::new(Region::new(0u32, 0, 2), false, false);
         n.subdivide();
-        n.children.as_mut().unwrap()[0].value = true;
+        n.children_mut()[0].set_value(true);
         assert!(n.find_node((0, 0).into()).value());
         assert!(!n.find_node((1, 0).into()).value());
         assert!(!n.find_node((0, 1).into()).value());
@@ -551,7 +566,7 @@ mod test {
         assert_eq!(path.path_bits(), 0);
         assert_eq!(path.depth(), 2);
 
-        n.children.as_mut().unwrap()[0].subdivide();
+        n.children_mut()[0].subdivide();
 
         let (_, path) = n.node_path((0, 0).into());
         assert_eq!(path.path_bits(), 0);
@@ -592,30 +607,27 @@ mod test {
         assert_eq!(*node.unwrap(), n);
 
         let node = n.find_node_by_path(NodePath::encode(2, 0));
-        assert_eq!(*node.unwrap(), n.children.as_ref().unwrap()[0]);
+        assert_eq!(*node.unwrap(), n.children()[0]);
 
         let node = n.find_node_by_path(NodePath::encode(2, 0b01));
-        assert_eq!(*node.unwrap(), n.children.as_ref().unwrap()[1]);
+        assert_eq!(*node.unwrap(), n.children()[1]);
 
         let node = n.find_node_by_path(NodePath::encode(2, 0b10));
-        assert_eq!(*node.unwrap(), n.children.as_ref().unwrap()[2]);
+        assert_eq!(*node.unwrap(), n.children()[2]);
 
         let node = n.find_node_by_path(NodePath::encode(2, 0b11));
-        assert_eq!(*node.unwrap(), n.children.as_ref().unwrap()[3]);
+        assert_eq!(*node.unwrap(), n.children()[3]);
 
         let node = n.find_node_by_path(NodePath::encode(3, 0b11));
         assert_eq!(node, None);
 
-        n.children.as_mut().unwrap()[0].subdivide();
+        n.children_mut()[0].subdivide();
 
         let node = n.find_node_by_path(NodePath::encode(2, 0));
-        assert_eq!(*node.unwrap(), n.children.as_ref().unwrap()[0]);
+        assert_eq!(*node.unwrap(), n.children()[0]);
 
         let node = n.find_node_by_path(NodePath::encode(3, 0));
-        assert_eq!(
-            *node.unwrap(),
-            n.children.as_ref().unwrap()[0].children.as_ref().unwrap()[0]
-        );
+        assert_eq!(*node.unwrap(), n.children()[0].children()[0]);
 
         let node = n.find_node_by_path(NodePath::encode(4, 0));
         assert_eq!(node, None);
@@ -625,8 +637,7 @@ mod test {
     fn test_set_pixel_subdivides() {
         let mut n = PNode::new(Region::new(0u32, 0, 2), false, false);
         n.set_pixel((0, 0).into(), 1, true);
-        assert!(!n.value);
-        assert!(n.children.is_some());
+        assert!(!n.is_leaf());
         assert!(n.find_node((0, 0).into()).value());
         assert!(!n.find_node((1, 0).into()).value());
         assert!(!n.find_node((0, 1).into()).value());
@@ -640,8 +651,8 @@ mod test {
         n.set_pixel((1, 0).into(), 1, true);
         n.set_pixel((0, 1).into(), 1, true);
         n.set_pixel((1, 1).into(), 1, true);
-        assert!(n.value);
-        assert!(n.children.is_none());
+        assert!(n.value());
+        assert!(n.is_leaf());
     }
 
     #[test]
@@ -649,8 +660,8 @@ mod test {
         let mut n = PNode::new(Region::new(0u32, 0, 2), false, false);
         n.set_pixel((0, 0).into(), 1, true);
         n.set_pixel((0, 0).into(), 1, false);
-        assert!(!n.value);
-        assert!(n.children.is_none());
+        assert!(!n.value());
+        assert!(n.is_leaf());
     }
 
     #[test]
@@ -671,16 +682,16 @@ mod test {
     fn test_set_rect_full() {
         let mut n = PNode::new(Region::new(0u32, 0, 2), false, false);
         n.draw_rect(&URect::new(0, 0, 2, 2), 1, true);
-        assert!(n.value);
-        assert!(n.children.is_none());
+        assert!(n.value());
+        assert!(n.is_leaf());
     }
 
     #[test]
     fn test_set_rect_contained() {
         let mut n = PNode::new(Region::new(0u32, 0, 2), false, false);
         n.draw_rect(&URect::new(0, 0, 1, 1), 1, true);
-        assert!(n.children.is_some());
-        assert!(n.children.as_ref().unwrap()[Quadrant::BottomLeft as usize].value);
+        assert!(!n.is_leaf());
+        assert!(n.children()[Quadrant::BottomLeft as usize].value());
     }
 
     #[test]
@@ -689,10 +700,10 @@ mod test {
         assert!(!n.dirty);
         n.set_pixel((0, 0).into(), 1, true);
         assert!(n.dirty);
-        assert!(n.children.as_mut().unwrap()[Quadrant::BottomLeft as usize].dirty);
-        assert!(!n.children.as_mut().unwrap()[Quadrant::BottomRight as usize].dirty);
-        assert!(!n.children.as_mut().unwrap()[Quadrant::TopLeft as usize].dirty);
-        assert!(!n.children.as_mut().unwrap()[Quadrant::TopRight as usize].dirty);
+        assert!(n.children_mut()[Quadrant::BottomLeft as usize].dirty);
+        assert!(!n.children_mut()[Quadrant::BottomRight as usize].dirty);
+        assert!(!n.children_mut()[Quadrant::TopLeft as usize].dirty);
+        assert!(!n.children_mut()[Quadrant::TopRight as usize].dirty);
     }
 
     #[test]
@@ -707,10 +718,10 @@ mod test {
             &mut traversed,
         );
         assert_eq!(traversed, 2);
-        assert!(!n.children.as_mut().unwrap()[Quadrant::BottomLeft as usize].dirty);
-        assert!(!n.children.as_mut().unwrap()[Quadrant::BottomRight as usize].dirty);
-        assert!(!n.children.as_mut().unwrap()[Quadrant::TopLeft as usize].dirty);
-        assert!(!n.children.as_mut().unwrap()[Quadrant::TopRight as usize].dirty);
+        assert!(!n.children_mut()[Quadrant::BottomLeft as usize].dirty);
+        assert!(!n.children_mut()[Quadrant::BottomRight as usize].dirty);
+        assert!(!n.children_mut()[Quadrant::TopLeft as usize].dirty);
+        assert!(!n.children_mut()[Quadrant::TopRight as usize].dirty);
     }
 
     #[test]
