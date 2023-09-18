@@ -2,8 +2,8 @@
 use serde::{Deserialize, Serialize};
 
 use super::{ICircle, Quadrant, RayCast, RayCastContext, RayCastQuery, RayCastResult, Region};
-use crate::{distance_to, exclusive_urect, NodePath};
-use bevy_math::{URect, UVec2};
+use crate::{distance_to, exclusive_urect, Edge, NodePath};
+use bevy_math::{uvec2, URect, UVec2};
 use num_traits::{NumCast, Unsigned};
 use std::fmt::Debug;
 
@@ -114,20 +114,25 @@ impl<T: Copy + PartialEq, U: Unsigned + NumCast + Copy + Debug> PNode<T, U> {
         }
     }
 
-    // Visit all nodes.
-    pub(super) fn visit_nodes<F>(&self, visitor: &mut F)
+    // Visit all nodes within the given rectangle boundary.
+    pub(super) fn visit_nodes_in_rect<F>(&self, rect: &URect, visitor: &mut F)
     where
-        F: FnMut(&PNode<T, U>),
+        F: FnMut(&PNode<T, U>, &URect) -> bool,
     {
-        visitor(self);
-        if let Some(children) = &self.children {
-            for child in children.as_ref() {
-                child.visit_nodes(visitor);
+        let sub_rect = self.region().intersect(rect);
+        if !sub_rect.is_empty() {
+            if !visitor(self, &sub_rect) {
+                return;
+            }
+            if let Some(children) = &self.children {
+                for child in children.as_ref() {
+                    child.visit_nodes_in_rect(&sub_rect, visitor);
+                }
             }
         }
     }
 
-    // Visit all leaf nodes within a given rectangle boundary.
+    // Visit all leaf nodes within the given rectangle boundary.
     pub(super) fn visit_leaves_in_rect<F>(&self, rect: &URect, visitor: &mut F, traversed: &mut u32)
     where
         F: FnMut(&PNode<T, U>, &URect),
@@ -412,6 +417,231 @@ impl<T: Copy + PartialEq, U: Unsigned + NumCast + Copy + Debug> PNode<T, U> {
         }
     }
 
+    pub(super) fn contour_face<F>(&self, rect: &URect, edges: &mut Vec<Edge>, predicate: &mut F)
+    where
+        F: FnMut(&PNode<T, U>, &URect) -> bool,
+    {
+        if let Some(ref children) = self.children {
+            for child in children.as_ref() {
+                child.contour_face(rect, edges, predicate);
+            }
+
+            Self::contour_edge_h(
+                &children[Quadrant::BottomLeft as usize],
+                &children[Quadrant::BottomRight as usize],
+                rect,
+                edges,
+                predicate,
+            );
+            Self::contour_edge_h(
+                &children[Quadrant::TopLeft as usize],
+                &children[Quadrant::TopRight as usize],
+                rect,
+                edges,
+                predicate,
+            );
+            Self::contour_edge_v(
+                &children[Quadrant::BottomLeft as usize],
+                &children[Quadrant::TopLeft as usize],
+                rect,
+                edges,
+                predicate,
+            );
+            Self::contour_edge_v(
+                &children[Quadrant::BottomRight as usize],
+                &children[Quadrant::TopRight as usize],
+                rect,
+                edges,
+                predicate,
+            );
+        }
+    }
+
+    pub(super) fn contour_edge_h<F>(
+        left: &PNode<T, U>,
+        right: &PNode<T, U>,
+        rect: &URect,
+        edges: &mut Vec<Edge>,
+        predicate: &mut F,
+    ) where
+        F: FnMut(&PNode<T, U>, &URect) -> bool,
+    {
+        match (left, right) {
+            (left, right) if left.is_leaf() && right.is_leaf() => {
+                if predicate(left, rect) != predicate(right, rect) {
+                    // right edge of the left node
+                    let left = left.region().as_urect();
+                    let left_right_edge = Edge::new(uvec2(left.max.x, left.min.y), left.max);
+
+                    // left edge of the right node
+                    let right = right.region().as_urect();
+                    let right_left_edge = Edge::new(right.min, uvec2(right.min.x, right.max.y));
+
+                    // overlapping edge
+                    let common_edge = Edge::new(
+                        uvec2(
+                            left_right_edge.0.x,
+                            left_right_edge.0.y.max(right_left_edge.0.y),
+                        ),
+                        uvec2(
+                            left_right_edge.1.x,
+                            left_right_edge.1.y.min(right_left_edge.1.y),
+                        ),
+                    );
+                    edges.push(common_edge);
+                }
+
+                /*
+                if predicate(left, rect) && predicate(right, rect) {
+                    edges.push(Edge::new(
+                        left.region().as_urect().center(),
+                        right.region().as_urect().center(),
+                    ));
+                }*/
+            }
+            (left, right) if left.is_leaf() && !right.is_leaf() => {
+                Self::contour_edge_h(
+                    left,
+                    &right.children.as_ref().unwrap()[Quadrant::BottomLeft as usize],
+                    rect,
+                    edges,
+                    predicate,
+                );
+                Self::contour_edge_h(
+                    left,
+                    &right.children.as_ref().unwrap()[Quadrant::TopLeft as usize],
+                    rect,
+                    edges,
+                    predicate,
+                );
+            }
+            (left, right) if !left.is_leaf() && right.is_leaf() => {
+                Self::contour_edge_h(
+                    &left.children.as_ref().unwrap()[Quadrant::BottomRight as usize],
+                    right,
+                    rect,
+                    edges,
+                    predicate,
+                );
+                Self::contour_edge_h(
+                    &left.children.as_ref().unwrap()[Quadrant::TopRight as usize],
+                    right,
+                    rect,
+                    edges,
+                    predicate,
+                );
+            }
+            (left, right) => {
+                Self::contour_edge_h(
+                    &left.children.as_ref().unwrap()[Quadrant::BottomRight as usize],
+                    &right.children.as_ref().unwrap()[Quadrant::BottomLeft as usize],
+                    rect,
+                    edges,
+                    predicate,
+                );
+                Self::contour_edge_h(
+                    &left.children.as_ref().unwrap()[Quadrant::TopRight as usize],
+                    &right.children.as_ref().unwrap()[Quadrant::TopLeft as usize],
+                    rect,
+                    edges,
+                    predicate,
+                );
+            }
+        }
+    }
+
+    pub(super) fn contour_edge_v<F>(
+        bottom: &PNode<T, U>,
+        top: &PNode<T, U>,
+        rect: &URect,
+        edges: &mut Vec<Edge>,
+        predicate: &mut F,
+    ) where
+        F: FnMut(&PNode<T, U>, &URect) -> bool,
+    {
+        match (bottom, top) {
+            (bottom, top) if bottom.is_leaf() && top.is_leaf() => {
+                if predicate(bottom, rect) != predicate(top, rect) {
+                    // top edge of the bottom node
+                    let bottom = bottom.region().as_urect();
+                    let bottom_top_edge = Edge::new(uvec2(bottom.min.x, bottom.max.y), bottom.max);
+
+                    // bottom edge of the top node
+                    let top = top.region().as_urect();
+                    let top_bottom_edge = Edge::new(top.min, uvec2(top.max.x, top.min.y));
+
+                    // overlapping edge
+                    let common_edge = Edge::new(
+                        uvec2(
+                            bottom_top_edge.0.x.max(top_bottom_edge.0.x),
+                            bottom_top_edge.0.y,
+                        ),
+                        uvec2(
+                            bottom_top_edge.1.x.min(top_bottom_edge.1.x),
+                            bottom_top_edge.1.y,
+                        ),
+                    );
+                    edges.push(common_edge);
+                }
+
+                /*if predicate(bottom, rect) && predicate(top, rect) {
+                    edges.push(Edge::new(
+                        bottom.region().as_urect().center(),
+                        top.region().as_urect().center(),
+                    ));
+                }*/
+            }
+            (bottom, top) if bottom.is_leaf() && !top.is_leaf() => {
+                Self::contour_edge_v(
+                    bottom,
+                    &top.children.as_ref().unwrap()[Quadrant::BottomLeft as usize],
+                    rect,
+                    edges,
+                    predicate,
+                );
+                Self::contour_edge_v(
+                    bottom,
+                    &top.children.as_ref().unwrap()[Quadrant::BottomRight as usize],
+                    rect,
+                    edges,
+                    predicate,
+                );
+            }
+            (bottom, top) if !bottom.is_leaf() && top.is_leaf() => {
+                Self::contour_edge_v(
+                    &bottom.children.as_ref().unwrap()[Quadrant::TopLeft as usize],
+                    top,
+                    rect,
+                    edges,
+                    predicate,
+                );
+                Self::contour_edge_v(
+                    &bottom.children.as_ref().unwrap()[Quadrant::TopRight as usize],
+                    top,
+                    rect,
+                    edges,
+                    predicate,
+                );
+            }
+            (bottom, top) => {
+                Self::contour_edge_v(
+                    &bottom.children.as_ref().unwrap()[Quadrant::TopLeft as usize],
+                    &top.children.as_ref().unwrap()[Quadrant::BottomLeft as usize],
+                    rect,
+                    edges,
+                    predicate,
+                );
+                Self::contour_edge_v(
+                    &bottom.children.as_ref().unwrap()[Quadrant::TopRight as usize],
+                    &top.children.as_ref().unwrap()[Quadrant::BottomRight as usize],
+                    rect,
+                    edges,
+                    predicate,
+                );
+            }
+        }
+    }
+
     #[inline]
     #[must_use]
     fn contained_by_rect(&self, rect: &URect) -> bool {
@@ -661,8 +891,9 @@ mod test {
         n.set_pixel((0, 1).into(), 1, true);
         n.set_pixel((1, 1).into(), 1, false);
         let mut count = 0;
-        n.visit_nodes(&mut |_n| {
+        n.visit_nodes_in_rect(&n.region().into(), &mut |_n, _r| {
             count += 1;
+            true
         });
         assert_eq!(count, 5);
     }

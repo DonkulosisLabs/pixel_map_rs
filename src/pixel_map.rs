@@ -2,7 +2,7 @@
 use serde::{Deserialize, Serialize};
 
 use super::{ICircle, PNode, RayCast, RayCastContext, RayCastQuery, RayCastResult, Region};
-use crate::{urect_points, NodePath, Shape, ULine};
+use crate::{urect_points, Edge, NodePath, Shape, ULine};
 use bevy_math::{IVec2, URect, UVec2};
 use num_traits::{NumCast, Unsigned};
 use std::collections::HashSet;
@@ -295,6 +295,16 @@ impl<T: Copy + PartialEq, U: Unsigned + NumCast + Copy + Debug> PixelMap<T, U> {
         traversed
     }
 
+    ///
+    #[inline]
+    pub fn visit_nodes_in_rect<F>(&self, rect: &URect, mut visitor: F)
+    where
+        F: FnMut(&PNode<T, U>, &URect) -> bool,
+    {
+        self.root
+            .visit_nodes_in_rect(&self.map_rect(), &mut visitor);
+    }
+
     /// Determine if any of the leaf nodes within the bounds of the given rectangle match the predicate.
     /// Node visitation short-circuits upon the first match.
     ///
@@ -563,16 +573,18 @@ impl<T: Copy + PartialEq, U: Unsigned + NumCast + Copy + Debug> PixelMap<T, U> {
     #[must_use]
     pub fn stats(&self) -> Stats {
         let mut stats = Stats::default();
-        self.root.visit_nodes(&mut |node| {
-            stats.node_count += 1;
-            if node.is_leaf() {
-                stats.leaf_count += 1;
+        self.root
+            .visit_nodes_in_rect(&self.region().into(), &mut |node, _| {
+                stats.node_count += 1;
+                if node.is_leaf() {
+                    stats.leaf_count += 1;
 
-                if node.region().is_unit(self.pixel_size) {
-                    stats.unit_count += 1;
+                    if node.region().is_unit(self.pixel_size) {
+                        stats.unit_count += 1;
+                    }
                 }
-            }
-        });
+                true
+            });
         stats
     }
 
@@ -645,6 +657,23 @@ impl<T: Copy + PartialEq, U: Unsigned + NumCast + Copy + Debug> PixelMap<T, U> {
         for (rect, color) in updates {
             self.draw_rect(&rect, color);
         }
+    }
+
+    #[inline]
+    #[must_use]
+    pub fn contour<F>(&self, rect: &URect, mut predicate: F) -> Vec<Edge>
+    where
+        F: FnMut(&PNode<T, U>, &URect) -> bool,
+    {
+        let mut edges: Vec<Edge> = Vec::with_capacity(1024);
+
+        let sub_rect = self.map_rect.intersect(*rect);
+        if !sub_rect.is_empty() {
+            self.root
+                .contour_face(&sub_rect, &mut edges, &mut predicate);
+        }
+
+        edges
     }
 }
 
