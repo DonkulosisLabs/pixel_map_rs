@@ -2,7 +2,7 @@
 use serde::{Deserialize, Serialize};
 
 use super::{ICircle, Quadrant, RayCast, RayCastContext, RayCastQuery, RayCastResult, Region};
-use crate::{distance_to, exclusive_urect, Edge, NodePath};
+use crate::{distance_to, exclusive_urect, NodePath, ULine};
 use bevy_math::{uvec2, URect, UVec2};
 use num_traits::{NumCast, Unsigned};
 use std::fmt::Debug;
@@ -417,7 +417,7 @@ impl<T: Copy + PartialEq, U: Unsigned + NumCast + Copy + Debug> PNode<T, U> {
         }
     }
 
-    pub(super) fn contour_face<F>(&self, rect: &URect, edges: &mut Vec<Edge>, predicate: &mut F)
+    pub(super) fn contour_face<F>(&self, rect: &URect, edges: &mut Vec<ULine>, predicate: &mut F)
     where
         F: FnMut(&PNode<T, U>, &URect) -> bool,
     {
@@ -461,7 +461,7 @@ impl<T: Copy + PartialEq, U: Unsigned + NumCast + Copy + Debug> PNode<T, U> {
         left: &PNode<T, U>,
         right: &PNode<T, U>,
         rect: &URect,
-        edges: &mut Vec<Edge>,
+        edges: &mut Vec<ULine>,
         predicate: &mut F,
     ) where
         F: FnMut(&PNode<T, U>, &URect) -> bool,
@@ -471,21 +471,21 @@ impl<T: Copy + PartialEq, U: Unsigned + NumCast + Copy + Debug> PNode<T, U> {
                 if predicate(left, rect) != predicate(right, rect) {
                     // right edge of the left node
                     let left = left.region().as_urect();
-                    let left_right_edge = Edge::new(uvec2(left.max.x, left.min.y), left.max);
+                    let left_right_edge = ULine::new(uvec2(left.max.x, left.min.y), left.max);
 
                     // left edge of the right node
                     let right = right.region().as_urect();
-                    let right_left_edge = Edge::new(right.min, uvec2(right.min.x, right.max.y));
+                    let right_left_edge = ULine::new(right.min, uvec2(right.min.x, right.max.y));
 
                     // overlapping edge
-                    let common_edge = Edge::new(
+                    let common_edge = ULine::new(
                         uvec2(
-                            left_right_edge.0.x,
-                            left_right_edge.0.y.max(right_left_edge.0.y),
+                            left_right_edge.start().x,
+                            left_right_edge.start().y.max(right_left_edge.start().y),
                         ),
                         uvec2(
-                            left_right_edge.1.x,
-                            left_right_edge.1.y.min(right_left_edge.1.y),
+                            left_right_edge.end().x,
+                            left_right_edge.end().y.min(right_left_edge.end().y),
                         ),
                     );
                     edges.push(common_edge);
@@ -554,7 +554,7 @@ impl<T: Copy + PartialEq, U: Unsigned + NumCast + Copy + Debug> PNode<T, U> {
         bottom: &PNode<T, U>,
         top: &PNode<T, U>,
         rect: &URect,
-        edges: &mut Vec<Edge>,
+        edges: &mut Vec<ULine>,
         predicate: &mut F,
     ) where
         F: FnMut(&PNode<T, U>, &URect) -> bool,
@@ -564,21 +564,21 @@ impl<T: Copy + PartialEq, U: Unsigned + NumCast + Copy + Debug> PNode<T, U> {
                 if predicate(bottom, rect) != predicate(top, rect) {
                     // top edge of the bottom node
                     let bottom = bottom.region().as_urect();
-                    let bottom_top_edge = Edge::new(uvec2(bottom.min.x, bottom.max.y), bottom.max);
+                    let bottom_top_edge = ULine::new(uvec2(bottom.min.x, bottom.max.y), bottom.max);
 
                     // bottom edge of the top node
                     let top = top.region().as_urect();
-                    let top_bottom_edge = Edge::new(top.min, uvec2(top.max.x, top.min.y));
+                    let top_bottom_edge = ULine::new(top.min, uvec2(top.max.x, top.min.y));
 
                     // overlapping edge
-                    let common_edge = Edge::new(
+                    let common_edge = ULine::new(
                         uvec2(
-                            bottom_top_edge.0.x.max(top_bottom_edge.0.x),
-                            bottom_top_edge.0.y,
+                            bottom_top_edge.start().x.max(top_bottom_edge.start().x),
+                            bottom_top_edge.start().y,
                         ),
                         uvec2(
-                            bottom_top_edge.1.x.min(top_bottom_edge.1.x),
-                            bottom_top_edge.1.y,
+                            bottom_top_edge.end().x.min(top_bottom_edge.end().x),
+                            bottom_top_edge.end().y,
                         ),
                     );
                     edges.push(common_edge);

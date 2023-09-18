@@ -8,7 +8,6 @@
 //! A type-generic value is stored for each pixel, but storage is optimized for regions of
 //! pixels having the same value (as per the function of a quad tree).
 
-mod contour;
 mod direction;
 mod math;
 mod node_path;
@@ -20,6 +19,6 @@ mod region;
 mod shapes;
 
 pub use self::{
-    contour::*, direction::*, math::*, node_path::*, pixel_map::*, pnode::*, quadrant::*,
-    ray_cast::*, region::*, shapes::*,
+    direction::*, math::*, node_path::*, pixel_map::*, pnode::*, quadrant::*, ray_cast::*,
+    region::*, shapes::*,
 };

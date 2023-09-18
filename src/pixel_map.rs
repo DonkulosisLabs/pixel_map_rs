@@ -2,7 +2,7 @@
 use serde::{Deserialize, Serialize};
 
 use super::{ICircle, PNode, RayCast, RayCastContext, RayCastQuery, RayCastResult, Region};
-use crate::{urect_points, Edge, NodePath, Shape, ULine};
+use crate::{urect_points, NodePath, Shape, ULine};
 use bevy_math::{IVec2, URect, UVec2};
 use num_traits::{NumCast, Unsigned};
 use std::collections::HashSet;
@@ -661,11 +661,11 @@ impl<T: Copy + PartialEq, U: Unsigned + NumCast + Copy + Debug> PixelMap<T, U> {
 
     #[inline]
     #[must_use]
-    pub fn contour<F>(&self, rect: &URect, mut predicate: F) -> Vec<Edge>
+    pub fn contour<F>(&self, rect: &URect, mut predicate: F) -> Vec<ULine>
     where
         F: FnMut(&PNode<T, U>, &URect) -> bool,
     {
-        let mut edges: Vec<Edge> = Vec::with_capacity(1024);
+        let mut edges: Vec<ULine> = Vec::with_capacity(1024);
 
         let sub_rect = self.map_rect.intersect(*rect);
         if !sub_rect.is_empty() {
