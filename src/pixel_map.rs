@@ -105,7 +105,7 @@ impl<T: Copy + PartialEq, U: Unsigned + NumCast + Copy + Debug> PixelMap<T, U> {
     /// Determine if this [PixelMap] is empty, which means that it has no pixel data.
     #[inline]
     pub fn empty(&self) -> bool {
-        self.root.children().is_none()
+        self.root.is_leaf()
     }
 
     /// Determine if the given point is within the [PixelMap::map_size] bounds.
@@ -123,7 +123,7 @@ impl<T: Copy + PartialEq, U: Unsigned + NumCast + Copy + Debug> PixelMap<T, U> {
     /// - `point`: The coordinates of the pixel for which to retrieve the associated value.
     #[inline]
     #[must_use]
-    pub fn get_pixel<P>(&self, point: P) -> Option<T>
+    pub fn get_pixel<P>(&self, point: P) -> Option<&T>
     where
         P: Into<UVec2>,
     {
@@ -637,7 +637,7 @@ impl<T: Copy + PartialEq, U: Unsigned + NumCast + Copy + Debug> PixelMap<T, U> {
             let mut region_rect: URect = node.region().into();
             region_rect = URect::from_corners(region_rect.min + offset, region_rect.max + offset);
             other.visit_in_rect(&region_rect, |other_node, sub_rect| {
-                let value = combiner(&node.value(), &other_node.value());
+                let value = combiner(node.value(), other_node.value());
                 let sub_rect = URect::from_corners(sub_rect.min - offset, sub_rect.max - offset);
                 updates.push((sub_rect, value));
             });
@@ -710,8 +710,8 @@ mod test {
         let mut pm = PixelMap::<i32, u32>::new(&UVec2::splat(2), 0, 1);
         pm.set_pixel((1, 1), 1);
         pm.clear(2);
-        assert_eq!(pm.root.value(), 2);
-        assert!(pm.root.children().is_none());
+        assert_eq!(pm.root.value(), &2);
+        assert!(pm.root.is_leaf());
     }
 
     #[test]
@@ -733,7 +733,7 @@ mod test {
                         if rect.contains(p) {
                             assert_eq!(
                                 pm.get_pixel(p),
-                                Some(true),
+                                Some(&true),
                                 "rect_width: {}, rect_height: {}, assert: {}",
                                 rect_width,
                                 rect_height,
@@ -742,7 +742,7 @@ mod test {
                         } else {
                             assert_eq!(
                                 pm.get_pixel(p),
-                                Some(false),
+                                Some(&false),
                                 "rect_width: {}, rect_height: {}, assert: {}",
                                 rect_width,
                                 rect_height,
@@ -802,30 +802,30 @@ mod test {
         let mut pm = PixelMap::<bool, u32>::new(&UVec2::splat(2), false, 1);
 
         assert_eq!(
-            pm.any_in_rect(&URect::new(0, 0, 2, 2), |n, _| n.value()),
+            pm.any_in_rect(&URect::new(0, 0, 2, 2), |n, _| *n.value()),
             Some(false)
         );
         assert_eq!(
-            pm.any_in_rect(&URect::new(2, 2, 4, 4), |n, _| n.value()),
+            pm.any_in_rect(&URect::new(2, 2, 4, 4), |n, _| *n.value()),
             None
         );
 
         pm.set_pixel((0, 0), true);
 
         assert_eq!(
-            pm.any_in_rect(&URect::new(0, 0, 2, 2), |n, _| n.value()),
+            pm.any_in_rect(&URect::new(0, 0, 2, 2), |n, _| *n.value()),
             Some(true)
         );
         assert_eq!(
-            pm.any_in_rect(&URect::new(0, 0, 2, 2), |n, _| !n.value()),
+            pm.any_in_rect(&URect::new(0, 0, 2, 2), |n, _| !*n.value()),
             Some(true)
         );
         assert_eq!(
-            pm.any_in_rect(&URect::new(0, 0, 1, 1), |n, _| n.value()),
+            pm.any_in_rect(&URect::new(0, 0, 1, 1), |n, _| *n.value()),
             Some(true)
         );
         assert_eq!(
-            pm.any_in_rect(&URect::new(1, 1, 2, 2), |n, _| n.value()),
+            pm.any_in_rect(&URect::new(1, 1, 2, 2), |n, _| *n.value()),
             Some(false)
         );
     }
@@ -835,30 +835,30 @@ mod test {
         let mut pm = PixelMap::<bool, u32>::new(&UVec2::splat(2), false, 1);
 
         assert_eq!(
-            pm.all_in_rect(&URect::new(0, 0, 2, 2), |n, _| !n.value()),
+            pm.all_in_rect(&URect::new(0, 0, 2, 2), |n, _| !*n.value()),
             Some(true)
         );
         assert_eq!(
-            pm.all_in_rect(&URect::new(2, 2, 4, 4), |n, _| n.value()),
+            pm.all_in_rect(&URect::new(2, 2, 4, 4), |n, _| *n.value()),
             None
         );
 
         pm.set_pixel((0, 0), true);
 
         assert_eq!(
-            pm.all_in_rect(&URect::new(0, 0, 2, 2), |n, _| n.value()),
+            pm.all_in_rect(&URect::new(0, 0, 2, 2), |n, _| *n.value()),
             Some(false)
         );
         assert_eq!(
-            pm.all_in_rect(&URect::new(0, 0, 2, 2), |n, _| !n.value()),
+            pm.all_in_rect(&URect::new(0, 0, 2, 2), |n, _| !*n.value()),
             Some(false)
         );
         assert_eq!(
-            pm.all_in_rect(&URect::new(0, 0, 1, 1), |n, _| n.value()),
+            pm.all_in_rect(&URect::new(0, 0, 1, 1), |n, _| *n.value()),
             Some(true)
         );
         assert_eq!(
-            pm.all_in_rect(&URect::new(1, 1, 2, 2), |n, _| n.value()),
+            pm.all_in_rect(&URect::new(1, 1, 2, 2), |n, _| *n.value()),
             Some(false)
         );
     }
