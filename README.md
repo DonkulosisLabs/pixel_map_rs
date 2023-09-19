@@ -34,7 +34,7 @@ use pixel_map::PixelMap;
 // Example pixel data
 struct MyColor(u8, u8, u8);
 
-let mut pixel_map = PixelMap<MyColor>::new(
+let mut pixel_map = PixelMap::<MyColor>::new(
     &uvec2(1920, 1080), // size of the pixel map
     MyColor(0, 0, 0),   // initial value
     1,                  // pixel size
@@ -52,7 +52,7 @@ pixel_map.set_pixel((11, 12), MyColor(255, 0, 0));
 pixel_map.draw_line(&ULine::new((500, 500), (600, 400)), MyColor(0, 255, 0));
 
 // Draw a rectangle
-pixel_map.draw_rect(&URect::from_corners((200, 200), (300, 300)), MyColor(0, 0, 255));
+pixel_map.draw_rect(&URect::from_corners(uvec2(200, 200), uvec2(300, 300)), MyColor(0, 0, 255));
 
 // Draw a circle
 pixel_map.draw_circle(&ICircle::new((500, 500), 100), MyColor(0, 0, 255));
@@ -81,6 +81,7 @@ pixel_map.clear_dirty(true /*recurse*/);
   * Circles
 * Perform boolean operations against two pixel maps (i.e. union, intersection, difference, xor).
 * Tree nodes maintain a dirty state for efficiently traversing recently modified regions of the tree.
+* Calculate contouring lines around shapes.
 
 ## Limitations
 

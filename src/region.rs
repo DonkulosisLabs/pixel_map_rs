@@ -127,6 +127,12 @@ impl<U: Unsigned + NumCast + Copy> Region<U> {
         r.min = r.min.min(r.max);
         r
     }
+
+    #[inline]
+    #[must_use]
+    pub fn as_urect(&self) -> URect {
+        self.into()
+    }
 }
 
 #[allow(clippy::from_over_into)]

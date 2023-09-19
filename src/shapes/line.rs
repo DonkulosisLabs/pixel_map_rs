@@ -4,11 +4,11 @@ use serde::{Deserialize, Serialize};
 use super::line_interval::LineInterval;
 use super::line_iterator::{plot_line, LinePixelIterator};
 use crate::{distance_squared_to, distance_to, urect_edges, Direction};
-use bevy_math::{URect, UVec2};
+use bevy_math::{uvec2, URect, UVec2};
 
 /// A line segment represented by two points, in integer coordinates.
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Hash)]
 pub struct ULine {
     start: UVec2,
     end: UVec2,
@@ -90,6 +90,14 @@ impl ULine {
         Self::new((x0 as u32, y0 as u32), (x1 as u32, y1 as u32))
     }
 
+    /// Flip the orientation of the line such that the start point
+    /// becomes the end point and vice versa.
+    #[inline]
+    #[must_use]
+    pub fn flip(&self) -> Self {
+        Self::new(self.end, self.start)
+    }
+
     /// Determine if the given point lies on this line.
     #[inline]
     #[must_use]
@@ -102,11 +110,22 @@ impl ULine {
         -f32::EPSILON < d && d < f32::EPSILON
     }
 
+    #[inline]
+    #[must_use]
+    pub fn is_vertical(&self) -> bool {
+        self.start.x == self.end.x
+    }
+
+    #[inline]
+    pub fn is_horizontal(&self) -> bool {
+        self.start.y == self.end.y
+    }
+
     /// Determine if this line is axis-aligned.
     #[inline]
     #[must_use]
     pub fn is_axis_aligned(&self) -> bool {
-        self.start.x == self.end.x || self.start.y == self.end.y
+        self.is_horizontal() || self.is_vertical()
     }
 
     /// Get the axis-aligned bounding box of this line.
@@ -179,6 +198,119 @@ impl ULine {
             }
         }
         false
+    }
+
+    /// Obtain the segment of this line that intersects the given rectangle, if any, otherwise `None`.
+    /// This line must be axis-aligned, otherwise `None` is returned.
+    #[inline]
+    #[must_use]
+    pub fn axis_aligned_intersect_rect(&self, rect: &URect) -> Option<ULine> {
+        if self.is_vertical() {
+            // Ensure the smaller `y` value is at the bottom
+            let (start, end, flipped) = if self.start.y < self.end.y {
+                (self.start, self.end, false)
+            } else {
+                (self.end, self.start, true)
+            };
+
+            // Ensure the vertical line is within the horizontal bounds of the rect
+            if start.x < rect.min.x || start.x > rect.max.x {
+                return None;
+            }
+
+            // Restrain the `y` values to the rect
+            let start_y = start.y.max(rect.min.y).min(rect.max.y);
+            let end_y = end.y.max(rect.min.y).min(rect.max.y);
+
+            if start_y <= end_y {
+                let result = ULine::new((start.x, start_y), (start.x, end_y));
+                if flipped {
+                    Some(result.flip())
+                } else {
+                    Some(result)
+                }
+            } else {
+                None
+            }
+        } else if self.is_horizontal() {
+            // Ensure the smaller `x` value is at the left
+            let (start, end, flipped) = if self.start.x < self.end.x {
+                (self.start, self.end, false)
+            } else {
+                (self.end, self.start, true)
+            };
+
+            // Ensure the horizontal line is within the vertical bounds of the rect
+            if start.y < rect.min.y || start.y > rect.max.y {
+                return None;
+            }
+
+            // Restrain the `x` values to the rect
+            let start_x = start.x.max(rect.min.x).min(rect.max.x);
+            let end_x = end.x.max(rect.min.x).min(rect.max.x);
+
+            if start_x <= end_x {
+                let result = ULine::new((start_x, start.y), (end_x, start.y));
+                if flipped {
+                    Some(result.flip())
+                } else {
+                    Some(result)
+                }
+            } else {
+                None
+            }
+        } else {
+            None
+        }
+    }
+
+    /// If this and the given line segments overlap, return the overlapping segment.
+    /// Otherwise, return `None`.
+    #[inline]
+    #[must_use]
+    pub fn overlap(&self, other: &ULine) -> Option<ULine> {
+        // Check if the edges share a common point
+        if self.start == other.start
+            || self.start == other.end
+            || self.end == other.start
+            || self.end == other.end
+        {
+            // If they share a common point, return the shorter of the two edges
+            let self_length = self.length_squared();
+            let other_length = other.length_squared();
+            return if self_length < other_length {
+                Some(*self)
+            } else {
+                Some(*other)
+            };
+        }
+
+        // Check for overlapping segments
+        let min_x1 = self.start.x.min(self.end.x);
+        let max_x1 = self.start.x.max(self.end.x);
+        let min_y1 = self.start.y.min(self.end.y);
+        let max_y1 = self.start.y.max(self.end.y);
+
+        let min_x2 = other.start.x.min(other.end.x);
+        let max_x2 = other.start.x.max(other.end.x);
+        let min_y2 = other.start.y.min(other.end.y);
+        let max_y2 = other.start.y.max(other.end.y);
+
+        if max_x1 < min_x2 || min_x1 > max_x2 || max_y1 < min_y2 || min_y1 > max_y2 {
+            // No overlap
+            return None;
+        }
+
+        // Calculate the overlapping segment
+        let overlap_start_x = max_x1.min(max_x2);
+        let overlap_start_y = max_y1.min(max_y2);
+        let overlap_end_x = min_x1.max(min_x2);
+        let overlap_end_y = min_y1.max(min_y2);
+
+        let overlap_start = uvec2(overlap_start_x, overlap_start_y);
+        let overlap_end = uvec2(overlap_end_x, overlap_end_y);
+
+        Some(ULine::new(overlap_start, overlap_end))
     }
 
     /// Use Bresenham's line algorithm to visit points on this line.

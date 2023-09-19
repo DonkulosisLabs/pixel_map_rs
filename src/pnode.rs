@@ -2,7 +2,7 @@
 use serde::{Deserialize, Serialize};
 
 use super::{ICircle, RayCast, RayCastContext, RayCastQuery, RayCastResult, Region};
-use crate::{distance_to, exclusive_urect, NodePath};
+use crate::{distance_to, exclusive_urect, NodePath, Quadrant};
 use bevy_math::{URect, UVec2};
 use num_traits::{NumCast, Unsigned};
 use std::fmt::Debug;
@@ -136,20 +136,27 @@ impl<T: Copy + PartialEq, U: Unsigned + NumCast + Copy + Debug> PNode<T, U> {
         };
     }
 
-    // Visit all nodes.
-    pub(super) fn visit_nodes<F>(&self, visitor: &mut F)
+    // Visit all nodes within the given rectangle boundary.
+    pub(super) fn visit_nodes_in_rect<F>(&self, rect: &URect, visitor: &mut F, traversed: &mut u32)
     where
-        F: FnMut(&PNode<T, U>),
+        F: FnMut(&PNode<T, U>, &URect) -> bool,
     {
-        visitor(self);
-        if let PNodeKind::Branch(children) = &self.kind {
-            for child in children.as_ref() {
-                child.visit_nodes(visitor);
+        *traversed += 1;
+
+        let sub_rect = self.region().intersect(rect);
+        if !sub_rect.is_empty() {
+            if !visitor(self, &sub_rect) {
+                return;
+            }
+            if let PNodeKind::Branch(children) = &self.kind {
+                for child in children.as_ref() {
+                    child.visit_nodes_in_rect(&sub_rect, visitor, traversed);
+                }
             }
         }
     }
 
-    // Visit all leaf nodes within a given rectangle boundary.
+    // Visit all leaf nodes within the given rectangle boundary.
     pub(super) fn visit_leaves_in_rect<F>(&self, rect: &URect, visitor: &mut F, traversed: &mut u32)
     where
         F: FnMut(&PNode<T, U>, &URect),
@@ -434,6 +441,177 @@ impl<T: Copy + PartialEq, U: Unsigned + NumCast + Copy + Debug> PNode<T, U> {
         }
     }
 
+    pub(super) fn visit_neighbor_pairs_face<F>(&self, rect: &URect, visitor: &mut F)
+    where
+        F: FnMut(NeighborOrientation, &PNode<T, U>, &URect, &PNode<T, U>, &URect),
+    {
+        if let PNodeKind::Branch(ref children) = self.kind {
+            let sub_rect = self.region().intersect(rect);
+            if sub_rect.is_empty() {
+                return;
+            }
+
+            for child in children.as_ref() {
+                child.visit_neighbor_pairs_face(&sub_rect, visitor);
+            }
+
+            Self::visit_neighbor_pairs_edge_h(
+                &children[Quadrant::BottomLeft as usize],
+                &children[Quadrant::BottomRight as usize],
+                rect,
+                visitor,
+            );
+            Self::visit_neighbor_pairs_edge_h(
+                &children[Quadrant::TopLeft as usize],
+                &children[Quadrant::TopRight as usize],
+                rect,
+                visitor,
+            );
+            Self::visit_neighbor_pairs_edge_v(
+                &children[Quadrant::BottomLeft as usize],
+                &children[Quadrant::TopLeft as usize],
+                rect,
+                visitor,
+            );
+            Self::visit_neighbor_pairs_edge_v(
+                &children[Quadrant::BottomRight as usize],
+                &children[Quadrant::TopRight as usize],
+                rect,
+                visitor,
+            );
+        }
+    }
+
+    pub(super) fn visit_neighbor_pairs_edge_h<F>(
+        left: &PNode<T, U>,
+        right: &PNode<T, U>,
+        rect: &URect,
+        visitor: &mut F,
+    ) where
+        F: FnMut(NeighborOrientation, &PNode<T, U>, &URect, &PNode<T, U>, &URect),
+    {
+        match (left, right) {
+            (left, right) if left.is_leaf() && right.is_leaf() => {
+                let sub_rect_l = left.region().intersect(rect);
+                let sub_rect_r = right.region().intersect(rect);
+                visitor(
+                    NeighborOrientation::Horizontal,
+                    left,
+                    &sub_rect_l,
+                    right,
+                    &sub_rect_r,
+                );
+            }
+            (left, right) if left.is_leaf() && !right.is_leaf() => {
+                Self::visit_neighbor_pairs_edge_h(
+                    left,
+                    &right.children()[Quadrant::BottomLeft as usize],
+                    rect,
+                    visitor,
+                );
+                Self::visit_neighbor_pairs_edge_h(
+                    left,
+                    &right.children()[Quadrant::TopLeft as usize],
+                    rect,
+                    visitor,
+                );
+            }
+            (left, right) if !left.is_leaf() && right.is_leaf() => {
+                Self::visit_neighbor_pairs_edge_h(
+                    &left.children()[Quadrant::BottomRight as usize],
+                    right,
+                    rect,
+                    visitor,
+                );
+                Self::visit_neighbor_pairs_edge_h(
+                    &left.children()[Quadrant::TopRight as usize],
+                    right,
+                    rect,
+                    visitor,
+                );
+            }
+            (left, right) => {
+                Self::visit_neighbor_pairs_edge_h(
+                    &left.children()[Quadrant::BottomRight as usize],
+                    &right.children()[Quadrant::BottomLeft as usize],
+                    rect,
+                    visitor,
+                );
+                Self::visit_neighbor_pairs_edge_h(
+                    &left.children()[Quadrant::TopRight as usize],
+                    &right.children()[Quadrant::TopLeft as usize],
+                    rect,
+                    visitor,
+                );
+            }
+        }
+    }
+
+    pub(super) fn visit_neighbor_pairs_edge_v<F>(
+        bottom: &PNode<T, U>,
+        top: &PNode<T, U>,
+        rect: &URect,
+        visitor: &mut F,
+    ) where
+        F: FnMut(NeighborOrientation, &PNode<T, U>, &URect, &PNode<T, U>, &URect),
+    {
+        match (bottom, top) {
+            (bottom, top) if bottom.is_leaf() && top.is_leaf() => {
+                let sub_rect_b = bottom.region().intersect(rect);
+                let sub_rect_t = top.region().intersect(rect);
+                visitor(
+                    NeighborOrientation::Vertical,
+                    bottom,
+                    &sub_rect_b,
+                    top,
+                    &sub_rect_t,
+                );
+            }
+            (bottom, top) if bottom.is_leaf() && !top.is_leaf() => {
+                Self::visit_neighbor_pairs_edge_v(
+                    bottom,
+                    &top.children()[Quadrant::BottomLeft as usize],
+                    rect,
+                    visitor,
+                );
+                Self::visit_neighbor_pairs_edge_v(
+                    bottom,
+                    &top.children()[Quadrant::BottomRight as usize],
+                    rect,
+                    visitor,
+                );
+            }
+            (bottom, top) if !bottom.is_leaf() && top.is_leaf() => {
+                Self::visit_neighbor_pairs_edge_v(
+                    &bottom.children()[Quadrant::TopLeft as usize],
+                    top,
+                    rect,
+                    visitor,
+                );
+                Self::visit_neighbor_pairs_edge_v(
+                    &bottom.children()[Quadrant::TopRight as usize],
+                    top,
+                    rect,
+                    visitor,
+                );
+            }
+            (bottom, top) => {
+                Self::visit_neighbor_pairs_edge_v(
+                    &bottom.children()[Quadrant::TopLeft as usize],
+                    &top.children()[Quadrant::BottomLeft as usize],
+                    rect,
+                    visitor,
+                );
+                Self::visit_neighbor_pairs_edge_v(
+                    &bottom.children()[Quadrant::TopRight as usize],
+                    &top.children()[Quadrant::BottomRight as usize],
+                    rect,
+                    visitor,
+                );
+            }
+        }
+    }
+
     #[inline]
     #[must_use]
     fn contained_by_rect(&self, rect: &URect) -> bool {
@@ -494,6 +672,13 @@ impl<T: Copy + PartialEq, U: Unsigned + NumCast + Copy + Debug> PNode<T, U> {
             self.dirty = children.iter().any(|child| child.dirty);
         }
     }
+}
+
+/// Describes the orientation of a pair of neighboring nodes.
+#[derive(Debug, PartialEq)]
+pub enum NeighborOrientation {
+    Horizontal,
+    Vertical,
 }
 
 #[cfg(test)]
@@ -672,9 +857,14 @@ mod test {
         n.set_pixel((0, 1).into(), 1, true);
         n.set_pixel((1, 1).into(), 1, false);
         let mut count = 0;
-        n.visit_nodes(&mut |_n| {
-            count += 1;
-        });
+        n.visit_nodes_in_rect(
+            &n.region().into(),
+            &mut |_n, _r| {
+                count += 1;
+                true
+            },
+            &mut 0,
+        );
         assert_eq!(count, 5);
     }
 
@@ -737,5 +927,52 @@ mod test {
             &mut traversed,
         );
         assert_eq!(traversed, 1);
+    }
+
+    #[test]
+    fn test_visit_neighbor_pairs_face() {
+        let mut n = PNode::new(Region::new(0u32, 0, 2), false, false);
+        n.set_pixel((0, 0).into(), 1, true); // Cause subdivision
+
+        let mut calls: Vec<(NeighborOrientation, URect, URect, URect, URect)> = Vec::new();
+
+        n.visit_neighbor_pairs_face(
+            &n.region().into(),
+            &mut |orientation, left, left_rect, right, right_rect| {
+                calls.push((
+                    orientation,
+                    left.region.as_urect(),
+                    *left_rect,
+                    right.region.as_urect(),
+                    *right_rect,
+                ));
+            },
+        );
+
+        assert_eq!(calls.len(), 4);
+
+        assert_eq!(calls[0].0, NeighborOrientation::Horizontal);
+        assert_eq!(calls[0].1, URect::new(0, 0, 1, 1));
+        assert_eq!(calls[0].2, URect::new(0, 0, 1, 1));
+        assert_eq!(calls[0].3, URect::new(1, 0, 2, 1));
+        assert_eq!(calls[0].4, URect::new(1, 0, 2, 1));
+
+        assert_eq!(calls[1].0, NeighborOrientation::Horizontal);
+        assert_eq!(calls[1].1, URect::new(0, 1, 1, 2));
+        assert_eq!(calls[1].2, URect::new(0, 1, 1, 2));
+        assert_eq!(calls[1].3, URect::new(1, 1, 2, 2));
+        assert_eq!(calls[1].4, URect::new(1, 1, 2, 2));
+
+        assert_eq!(calls[2].0, NeighborOrientation::Vertical);
+        assert_eq!(calls[2].1, URect::new(0, 0, 1, 1));
+        assert_eq!(calls[2].2, URect::new(0, 0, 1, 1));
+        assert_eq!(calls[2].3, URect::new(0, 1, 1, 2));
+        assert_eq!(calls[2].4, URect::new(0, 1, 1, 2));
+
+        assert_eq!(calls[3].0, NeighborOrientation::Vertical);
+        assert_eq!(calls[3].1, URect::new(1, 0, 2, 1));
+        assert_eq!(calls[3].2, URect::new(1, 0, 2, 1));
+        assert_eq!(calls[3].3, URect::new(1, 1, 2, 2));
+        assert_eq!(calls[3].4, URect::new(1, 1, 2, 2));
     }
 }

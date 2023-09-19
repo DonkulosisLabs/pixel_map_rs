@@ -2,8 +2,8 @@
 use serde::{Deserialize, Serialize};
 
 use super::{ICircle, PNode, RayCast, RayCastContext, RayCastQuery, RayCastResult, Region};
-use crate::{urect_points, NodePath, Shape, ULine};
-use bevy_math::{IVec2, URect, UVec2};
+use crate::{urect_points, NeighborOrientation, NodePath, Shape, ULine};
+use bevy_math::{uvec2, IVec2, URect, UVec2};
 use num_traits::{NumCast, Unsigned};
 use std::collections::HashSet;
 use std::fmt::{Debug, Formatter};
@@ -295,6 +295,35 @@ impl<T: Copy + PartialEq, U: Unsigned + NumCast + Copy + Debug> PixelMap<T, U> {
         traversed
     }
 
+    /// Visit all nodes in this [PixelMap] that overlap with the given rectangle, controlling
+    /// navigation with the visitor return value.
+    ///
+    /// # Parameters
+    ///
+    /// - `rect`: The rectangle in which contained or overlapping nodes will be visited.
+    /// - `visitor`: A closure that takes a reference to a node, and a reference to a
+    ///   rectangle as parameters. This rectangle represents the intersection of the node's
+    ///   region and the `rect` parameter supplied to this method. It returns `true` if the
+    ///   node's children should be visited, or `false` otherwise.
+    ///
+    /// # Returns
+    ///
+    /// The number of nodes traversed.
+    #[inline]
+    pub fn visit_nodes_in_rect<F>(&self, rect: &URect, mut visitor: F) -> u32
+    where
+        F: FnMut(&PNode<T, U>, &URect) -> bool,
+    {
+        let rect = rect.intersect(self.map_rect());
+        if rect.is_empty() {
+            return 0;
+        }
+        let mut traversed = 0u32;
+        self.root
+            .visit_nodes_in_rect(&rect, &mut visitor, &mut traversed);
+        traversed
+    }
+
     /// Determine if any of the leaf nodes within the bounds of the given rectangle match the predicate.
     /// Node visitation short-circuits upon the first match.
     ///
@@ -563,16 +592,21 @@ impl<T: Copy + PartialEq, U: Unsigned + NumCast + Copy + Debug> PixelMap<T, U> {
     #[must_use]
     pub fn stats(&self) -> Stats {
         let mut stats = Stats::default();
-        self.root.visit_nodes(&mut |node| {
-            stats.node_count += 1;
-            if node.is_leaf() {
-                stats.leaf_count += 1;
+        self.root.visit_nodes_in_rect(
+            &self.region().into(),
+            &mut |node, _| {
+                stats.node_count += 1;
+                if node.is_leaf() {
+                    stats.leaf_count += 1;
 
-                if node.region().is_unit(self.pixel_size) {
-                    stats.unit_count += 1;
+                    if node.region().is_unit(self.pixel_size) {
+                        stats.unit_count += 1;
+                    }
                 }
-            }
-        });
+                true
+            },
+            &mut 0,
+        );
         stats
     }
 
@@ -645,6 +679,122 @@ impl<T: Copy + PartialEq, U: Unsigned + NumCast + Copy + Debug> PixelMap<T, U> {
         for (rect, color) in updates {
             self.draw_rect(&rect, color);
         }
+    }
+
+    /// Visit all leaf nodes that intersect with the given `rect` that are neighbors.
+    /// The `visitor` closure is called once for each unique pair of neighbor nodes.
+    ///
+    /// # Parameters
+    ///
+    /// - `rect`: The rectangle in which contained or overlapping nodes will be visited.
+    /// - `visitor`: A closure that takes:
+    ///   - A [NeighborOrientation] that indicates the orientation of the neighboring nodes.
+    ///   - The left or bottom node, depending on the orientation.
+    ///   - The rectangle that is the effective intersection of the left or bottom node's region
+    ///     and the `rect` parameter supplied to this method.
+    ///   - The right or top node, depending on the orientation.
+    ///   - The rectangle that is the effective intersection of the right or top node's region
+    ///     and the `rect` parameter supplied to this method.
+    pub fn visit_neighbor_pairs<F>(&self, rect: &URect, visitor: &mut F)
+    where
+        F: FnMut(NeighborOrientation, &PNode<T, U>, &URect, &PNode<T, U>, &URect),
+    {
+        let sub_rect = self.map_rect.intersect(*rect);
+        if !sub_rect.is_empty() {
+            self.root.visit_neighbor_pairs_face(&sub_rect, visitor);
+        }
+    }
+
+    /// Obtain a list of line segments that contour the shapes determined by the given
+    /// `predicate` closure. In other words, if the `predicate` returns `true`,
+    /// the node is considered to be part of the shape for which a contour is being generated.
+    ///
+    /// *Note*: This implementation is likely to change in the future which may affect the
+    /// characteristics of the returned data.
+    ///
+    /// # Parameters
+    ///
+    /// - `rect`: The rectangle in which contained or overlapping nodes will be visited.
+    /// - `predicate`: A closure that takes a reference to a leaf node,
+    ///    and a reference to the rectangle that is the effective intersection of the node's
+    ///    region and the `rect` parameter supplied to this method.
+    ///
+    /// # Returns
+    ///
+    /// A list of line segments that contour the shapes determined by the given
+    /// `predicate` closure. Returned line segments are non-contiguous; this is *not* a polyline.
+    #[must_use]
+    pub fn contour<F>(&self, rect: &URect, mut predicate: F) -> Vec<ULine>
+    where
+        F: FnMut(&PNode<T, U>, &URect) -> bool,
+    {
+        let sub_rect = self.map_rect.intersect(*rect);
+        if sub_rect.is_empty() {
+            return vec![];
+        }
+
+        let mut edges: Vec<ULine> = Vec::with_capacity(1024);
+
+        self.root
+            .visit_neighbor_pairs_face(&sub_rect, &mut |or, a, a_rect, b, b_rect| {
+                match or {
+                    NeighborOrientation::Horizontal => {
+                        let (left, left_rect, right, right_rect) = (a, a_rect, b, b_rect);
+                        if predicate(left, left_rect) != predicate(right, right_rect) {
+                            // right edge of the left node
+                            let left = left.region().as_urect();
+                            let left_right_edge =
+                                ULine::new(uvec2(left.max.x, left.min.y), left.max);
+                            let left_right_edge =
+                                left_right_edge.axis_aligned_intersect_rect(left_rect);
+
+                            // left edge of the right node
+                            let right = right.region().as_urect();
+                            let right_left_edge =
+                                ULine::new(right.min, uvec2(right.min.x, right.max.y));
+                            let right_left_edge =
+                                right_left_edge.axis_aligned_intersect_rect(right_rect);
+
+                            if let (Some(left_right_edge), Some(right_left_edge)) =
+                                (left_right_edge, right_left_edge)
+                            {
+                                if let Some(common_edge) = left_right_edge.overlap(&right_left_edge)
+                                {
+                                    edges.push(common_edge);
+                                }
+                            }
+                        }
+                    }
+                    NeighborOrientation::Vertical => {
+                        let (bottom, bottom_rect, top, top_rect) = (a, a_rect, b, b_rect);
+                        if predicate(bottom, bottom_rect) != predicate(top, top_rect) {
+                            // top edge of the bottom node
+                            let bottom = bottom.region().as_urect();
+                            let bottom_top_edge =
+                                ULine::new(uvec2(bottom.min.x, bottom.max.y), bottom.max);
+                            let bottom_top_edge =
+                                bottom_top_edge.axis_aligned_intersect_rect(bottom_rect);
+
+                            // bottom edge of the top node
+                            let top = top.region().as_urect();
+                            let top_bottom_edge = ULine::new(top.min, uvec2(top.max.x, top.min.y));
+                            let top_bottom_edge =
+                                top_bottom_edge.axis_aligned_intersect_rect(top_rect);
+
+                            if let (Some(bottom_top_edge), Some(top_bottom_edge)) =
+                                (bottom_top_edge, top_bottom_edge)
+                            {
+                                if let Some(common_edge) = bottom_top_edge.overlap(&top_bottom_edge)
+                                {
+                                    edges.push(common_edge);
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+
+        edges
     }
 }
 
