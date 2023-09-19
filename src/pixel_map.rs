@@ -2,8 +2,8 @@
 use serde::{Deserialize, Serialize};
 
 use super::{ICircle, PNode, RayCast, RayCastContext, RayCastQuery, RayCastResult, Region};
-use crate::{urect_points, NodePath, Shape, ULine};
-use bevy_math::{IVec2, URect, UVec2};
+use crate::{urect_points, NeighborOrientation, NodePath, Shape, ULine};
+use bevy_math::{uvec2, IVec2, URect, UVec2};
 use num_traits::{NumCast, Unsigned};
 use std::collections::HashSet;
 use std::fmt::{Debug, Formatter};
@@ -105,7 +105,7 @@ impl<T: Copy + PartialEq, U: Unsigned + NumCast + Copy + Debug> PixelMap<T, U> {
     /// Determine if this [PixelMap] is empty, which means that it has no pixel data.
     #[inline]
     pub fn empty(&self) -> bool {
-        self.root.children().is_none()
+        self.root.is_leaf()
     }
 
     /// Determine if the given point is within the [PixelMap::map_size] bounds.
@@ -123,7 +123,7 @@ impl<T: Copy + PartialEq, U: Unsigned + NumCast + Copy + Debug> PixelMap<T, U> {
     /// - `point`: The coordinates of the pixel for which to retrieve the associated value.
     #[inline]
     #[must_use]
-    pub fn get_pixel<P>(&self, point: P) -> Option<T>
+    pub fn get_pixel<P>(&self, point: P) -> Option<&T>
     where
         P: Into<UVec2>,
     {
@@ -301,8 +301,7 @@ impl<T: Copy + PartialEq, U: Unsigned + NumCast + Copy + Debug> PixelMap<T, U> {
     where
         F: FnMut(&PNode<T, U>, &URect) -> bool,
     {
-        self.root
-            .visit_nodes_in_rect(&self.map_rect(), &mut visitor);
+        self.root.visit_nodes_in_rect(rect, &mut visitor);
     }
 
     /// Determine if any of the leaf nodes within the bounds of the given rectangle match the predicate.
@@ -649,7 +648,7 @@ impl<T: Copy + PartialEq, U: Unsigned + NumCast + Copy + Debug> PixelMap<T, U> {
             let mut region_rect: URect = node.region().into();
             region_rect = URect::from_corners(region_rect.min + offset, region_rect.max + offset);
             other.visit_in_rect(&region_rect, |other_node, sub_rect| {
-                let value = combiner(&node.value(), &other_node.value());
+                let value = combiner(node.value(), other_node.value());
                 let sub_rect = URect::from_corners(sub_rect.min - offset, sub_rect.max - offset);
                 updates.push((sub_rect, value));
             });
@@ -659,20 +658,86 @@ impl<T: Copy + PartialEq, U: Unsigned + NumCast + Copy + Debug> PixelMap<T, U> {
         }
     }
 
+    /// Obtain a list of line segments that contour the shapes determined by the given
+    /// `predicate` closure. In other words, if the `predicate` returns `true`,
+    /// the node is considered to be part of the shape for which a contour is being generated.
+    /// Returned line segments are non-contiguous; this is *not* a polyline.
+    ///
+    /// *Note*: This implementation is likely to change in the future which may affect the
+    /// characteristics of the returned data.
     #[inline]
     #[must_use]
     pub fn contour<F>(&self, rect: &URect, mut predicate: F) -> Vec<ULine>
     where
         F: FnMut(&PNode<T, U>, &URect) -> bool,
     {
-        let mut edges: Vec<ULine> = Vec::with_capacity(1024);
-
         let sub_rect = self.map_rect.intersect(*rect);
-        if !sub_rect.is_empty() {
-            self.root
-                .contour_face(&sub_rect, &mut edges, &mut predicate);
+        if sub_rect.is_empty() {
+            return vec![];
         }
 
+        let mut edges: HashSet<ULine> = HashSet::with_capacity(1024);
+
+        self.root
+            .visit_neighbor_pairs_face(&sub_rect, &mut |or, a, a_rect, b, b_rect| {
+                match or {
+                    NeighborOrientation::Horizontal => {
+                        let (left, left_rect, right, right_rect) = (a, a_rect, b, b_rect);
+                        if predicate(left, left_rect) != predicate(right, right_rect) {
+                            // right edge of the left node
+                            let left = left.region().as_urect();
+                            let left_right_edge =
+                                ULine::new(uvec2(left.max.x, left.min.y), left.max);
+                            let left_right_edge =
+                                left_right_edge.axis_aligned_intersect_rect(left_rect);
+
+                            // left edge of the right node
+                            let right = right.region().as_urect();
+                            let right_left_edge =
+                                ULine::new(right.min, uvec2(right.min.x, right.max.y));
+                            let right_left_edge =
+                                right_left_edge.axis_aligned_intersect_rect(right_rect);
+
+                            if let (Some(left_right_edge), Some(right_left_edge)) =
+                                (left_right_edge, right_left_edge)
+                            {
+                                if let Some(common_edge) = left_right_edge.overlap(&right_left_edge)
+                                {
+                                    edges.insert(common_edge);
+                                }
+                            }
+                        }
+                    }
+                    NeighborOrientation::Vertical => {
+                        let (bottom, bottom_rect, top, top_rect) = (a, a_rect, b, b_rect);
+                        if predicate(bottom, bottom_rect) != predicate(top, top_rect) {
+                            // top edge of the bottom node
+                            let bottom = bottom.region().as_urect();
+                            let bottom_top_edge =
+                                ULine::new(uvec2(bottom.min.x, bottom.max.y), bottom.max);
+                            let bottom_top_edge =
+                                bottom_top_edge.axis_aligned_intersect_rect(bottom_rect);
+
+                            // bottom edge of the top node
+                            let top = top.region().as_urect();
+                            let top_bottom_edge = ULine::new(top.min, uvec2(top.max.x, top.min.y));
+                            let top_bottom_edge =
+                                top_bottom_edge.axis_aligned_intersect_rect(top_rect);
+
+                            if let (Some(bottom_top_edge), Some(top_bottom_edge)) =
+                                (bottom_top_edge, top_bottom_edge)
+                            {
+                                if let Some(common_edge) = bottom_top_edge.overlap(&top_bottom_edge)
+                                {
+                                    edges.insert(common_edge);
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+
+        let edges: Vec<ULine> = edges.into_iter().collect();
         edges
     }
 }
@@ -739,8 +804,8 @@ mod test {
         let mut pm = PixelMap::<i32, u32>::new(&UVec2::splat(2), 0, 1);
         pm.set_pixel((1, 1), 1);
         pm.clear(2);
-        assert_eq!(pm.root.value(), 2);
-        assert!(pm.root.children().is_none());
+        assert_eq!(pm.root.value(), &2);
+        assert!(pm.root.is_leaf());
     }
 
     #[test]
@@ -762,7 +827,7 @@ mod test {
                         if rect.contains(p) {
                             assert_eq!(
                                 pm.get_pixel(p),
-                                Some(true),
+                                Some(&true),
                                 "rect_width: {}, rect_height: {}, assert: {}",
                                 rect_width,
                                 rect_height,
@@ -771,7 +836,7 @@ mod test {
                         } else {
                             assert_eq!(
                                 pm.get_pixel(p),
-                                Some(false),
+                                Some(&false),
                                 "rect_width: {}, rect_height: {}, assert: {}",
                                 rect_width,
                                 rect_height,
@@ -831,30 +896,30 @@ mod test {
         let mut pm = PixelMap::<bool, u32>::new(&UVec2::splat(2), false, 1);
 
         assert_eq!(
-            pm.any_in_rect(&URect::new(0, 0, 2, 2), |n, _| n.value()),
+            pm.any_in_rect(&URect::new(0, 0, 2, 2), |n, _| *n.value()),
             Some(false)
         );
         assert_eq!(
-            pm.any_in_rect(&URect::new(2, 2, 4, 4), |n, _| n.value()),
+            pm.any_in_rect(&URect::new(2, 2, 4, 4), |n, _| *n.value()),
             None
         );
 
         pm.set_pixel((0, 0), true);
 
         assert_eq!(
-            pm.any_in_rect(&URect::new(0, 0, 2, 2), |n, _| n.value()),
+            pm.any_in_rect(&URect::new(0, 0, 2, 2), |n, _| *n.value()),
             Some(true)
         );
         assert_eq!(
-            pm.any_in_rect(&URect::new(0, 0, 2, 2), |n, _| !n.value()),
+            pm.any_in_rect(&URect::new(0, 0, 2, 2), |n, _| !*n.value()),
             Some(true)
         );
         assert_eq!(
-            pm.any_in_rect(&URect::new(0, 0, 1, 1), |n, _| n.value()),
+            pm.any_in_rect(&URect::new(0, 0, 1, 1), |n, _| *n.value()),
             Some(true)
         );
         assert_eq!(
-            pm.any_in_rect(&URect::new(1, 1, 2, 2), |n, _| n.value()),
+            pm.any_in_rect(&URect::new(1, 1, 2, 2), |n, _| *n.value()),
             Some(false)
         );
     }
@@ -864,30 +929,30 @@ mod test {
         let mut pm = PixelMap::<bool, u32>::new(&UVec2::splat(2), false, 1);
 
         assert_eq!(
-            pm.all_in_rect(&URect::new(0, 0, 2, 2), |n, _| !n.value()),
+            pm.all_in_rect(&URect::new(0, 0, 2, 2), |n, _| !*n.value()),
             Some(true)
         );
         assert_eq!(
-            pm.all_in_rect(&URect::new(2, 2, 4, 4), |n, _| n.value()),
+            pm.all_in_rect(&URect::new(2, 2, 4, 4), |n, _| *n.value()),
             None
         );
 
         pm.set_pixel((0, 0), true);
 
         assert_eq!(
-            pm.all_in_rect(&URect::new(0, 0, 2, 2), |n, _| n.value()),
+            pm.all_in_rect(&URect::new(0, 0, 2, 2), |n, _| *n.value()),
             Some(false)
         );
         assert_eq!(
-            pm.all_in_rect(&URect::new(0, 0, 2, 2), |n, _| !n.value()),
+            pm.all_in_rect(&URect::new(0, 0, 2, 2), |n, _| !*n.value()),
             Some(false)
         );
         assert_eq!(
-            pm.all_in_rect(&URect::new(0, 0, 1, 1), |n, _| n.value()),
+            pm.all_in_rect(&URect::new(0, 0, 1, 1), |n, _| *n.value()),
             Some(true)
         );
         assert_eq!(
-            pm.all_in_rect(&URect::new(1, 1, 2, 2), |n, _| n.value()),
+            pm.all_in_rect(&URect::new(1, 1, 2, 2), |n, _| *n.value()),
             Some(false)
         );
     }

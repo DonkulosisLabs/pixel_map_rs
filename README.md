@@ -81,6 +81,7 @@ pixel_map.clear_dirty(true /*recurse*/);
   * Circles
 * Perform boolean operations against two pixel maps (i.e. union, intersection, difference, xor).
 * Tree nodes maintain a dirty state for efficiently traversing recently modified regions of the tree.
+* Calculate contouring lines around shapes.
 
 ## Limitations
 
