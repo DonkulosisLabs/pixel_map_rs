@@ -658,14 +658,48 @@ impl<T: Copy + PartialEq, U: Unsigned + NumCast + Copy + Debug> PixelMap<T, U> {
         }
     }
 
+    /// Visit all leaf nodes that intersect with the given `rect` that are neighbors.
+    /// The `visitor` closure is called once for each unique pair of neighbor nodes.
+    ///
+    /// # Parameters
+    ///
+    /// - `rect`: The rectangle in which contained or overlapping nodes will be visited.
+    /// - `visitor`: A closure that takes:
+    ///   - A [NeighborOrientation] that indicates the orientation of the neighboring nodes.
+    ///   - The left or bottom node, depending on the orientation.
+    ///   - The rectangle that is the effective intersection of the left or bottom node's region
+    ///     and the `rect` parameter supplied to this method.
+    ///   - The right or top node, depending on the orientation.
+    ///   - The rectangle that is the effective intersection of the right or top node's region
+    ///     and the `rect` parameter supplied to this method.
+    pub fn visit_neighbor_pairs<F>(&self, rect: &URect, visitor: &mut F)
+    where
+        F: FnMut(NeighborOrientation, &PNode<T, U>, &URect, &PNode<T, U>, &URect),
+    {
+        let sub_rect = self.map_rect.intersect(*rect);
+        if !sub_rect.is_empty() {
+            self.root.visit_neighbor_pairs_face(&sub_rect, visitor);
+        }
+    }
+
     /// Obtain a list of line segments that contour the shapes determined by the given
     /// `predicate` closure. In other words, if the `predicate` returns `true`,
     /// the node is considered to be part of the shape for which a contour is being generated.
-    /// Returned line segments are non-contiguous; this is *not* a polyline.
     ///
     /// *Note*: This implementation is likely to change in the future which may affect the
     /// characteristics of the returned data.
-    #[inline]
+    ///
+    /// # Parameters
+    ///
+    /// - `rect`: The rectangle in which contained or overlapping nodes will be visited.
+    /// - `predicate`: A closure that takes a reference to a leaf node,
+    ///    and a reference to the rectangle that is the effective intersection of the node's
+    ///    region and the `rect` parameter supplied to this method.
+    ///
+    /// # Returns
+    ///
+    /// A list of line segments that contour the shapes determined by the given
+    /// `predicate` closure. Returned line segments are non-contiguous; this is *not* a polyline.
     #[must_use]
     pub fn contour<F>(&self, rect: &URect, mut predicate: F) -> Vec<ULine>
     where

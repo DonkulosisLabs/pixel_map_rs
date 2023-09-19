@@ -2,7 +2,7 @@
 use serde::{Deserialize, Serialize};
 
 use super::{ICircle, RayCast, RayCastContext, RayCastQuery, RayCastResult, Region};
-use crate::{distance_to, exclusive_urect, NodePath, Quadrant, ULine};
+use crate::{distance_to, exclusive_urect, NodePath, Quadrant};
 use bevy_math::{URect, UVec2};
 use num_traits::{NumCast, Unsigned};
 use std::fmt::Debug;
@@ -672,6 +672,8 @@ impl<T: Copy + PartialEq, U: Unsigned + NumCast + Copy + Debug> PNode<T, U> {
     }
 }
 
+/// Describes the orientation of a pair of neighboring nodes.
+#[derive(Debug, PartialEq)]
 pub enum NeighborOrientation {
     Horizontal,
     Vertical,
@@ -919,5 +921,52 @@ mod test {
             &mut traversed,
         );
         assert_eq!(traversed, 1);
+    }
+
+    #[test]
+    fn test_visit_neighbor_pairs_face() {
+        let mut n = PNode::new(Region::new(0u32, 0, 2), false, false);
+        n.set_pixel((0, 0).into(), 1, true); // Cause subdivision
+
+        let mut calls: Vec<(NeighborOrientation, URect, URect, URect, URect)> = Vec::new();
+
+        n.visit_neighbor_pairs_face(
+            &n.region().into(),
+            &mut |orientation, left, left_rect, right, right_rect| {
+                calls.push((
+                    orientation,
+                    left.region.as_urect(),
+                    *left_rect,
+                    right.region.as_urect(),
+                    *right_rect,
+                ));
+            },
+        );
+
+        assert_eq!(calls.len(), 4);
+
+        assert_eq!(calls[0].0, NeighborOrientation::Horizontal);
+        assert_eq!(calls[0].1, URect::new(0, 0, 1, 1));
+        assert_eq!(calls[0].2, URect::new(0, 0, 1, 1));
+        assert_eq!(calls[0].3, URect::new(1, 0, 2, 1));
+        assert_eq!(calls[0].4, URect::new(1, 0, 2, 1));
+
+        assert_eq!(calls[1].0, NeighborOrientation::Horizontal);
+        assert_eq!(calls[1].1, URect::new(0, 1, 1, 2));
+        assert_eq!(calls[1].2, URect::new(0, 1, 1, 2));
+        assert_eq!(calls[1].3, URect::new(1, 1, 2, 2));
+        assert_eq!(calls[1].4, URect::new(1, 1, 2, 2));
+
+        assert_eq!(calls[2].0, NeighborOrientation::Vertical);
+        assert_eq!(calls[2].1, URect::new(0, 0, 1, 1));
+        assert_eq!(calls[2].2, URect::new(0, 0, 1, 1));
+        assert_eq!(calls[2].3, URect::new(0, 1, 1, 2));
+        assert_eq!(calls[2].4, URect::new(0, 1, 1, 2));
+
+        assert_eq!(calls[3].0, NeighborOrientation::Vertical);
+        assert_eq!(calls[3].1, URect::new(1, 0, 2, 1));
+        assert_eq!(calls[3].2, URect::new(1, 0, 2, 1));
+        assert_eq!(calls[3].3, URect::new(1, 1, 2, 2));
+        assert_eq!(calls[3].4, URect::new(1, 1, 2, 2));
     }
 }
