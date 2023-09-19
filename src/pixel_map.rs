@@ -733,7 +733,7 @@ impl<T: Copy + PartialEq, U: Unsigned + NumCast + Copy + Debug> PixelMap<T, U> {
             return vec![];
         }
 
-        let mut edges: HashSet<ULine> = HashSet::with_capacity(1024);
+        let mut edges: Vec<ULine> = Vec::with_capacity(1024);
 
         self.root
             .visit_neighbor_pairs_face(&sub_rect, &mut |or, a, a_rect, b, b_rect| {
@@ -760,7 +760,7 @@ impl<T: Copy + PartialEq, U: Unsigned + NumCast + Copy + Debug> PixelMap<T, U> {
                             {
                                 if let Some(common_edge) = left_right_edge.overlap(&right_left_edge)
                                 {
-                                    edges.insert(common_edge);
+                                    edges.push(common_edge);
                                 }
                             }
                         }
@@ -786,7 +786,7 @@ impl<T: Copy + PartialEq, U: Unsigned + NumCast + Copy + Debug> PixelMap<T, U> {
                             {
                                 if let Some(common_edge) = bottom_top_edge.overlap(&top_bottom_edge)
                                 {
-                                    edges.insert(common_edge);
+                                    edges.push(common_edge);
                                 }
                             }
                         }
@@ -794,7 +794,6 @@ impl<T: Copy + PartialEq, U: Unsigned + NumCast + Copy + Debug> PixelMap<T, U> {
                 }
             });
 
-        let edges: Vec<ULine> = edges.into_iter().collect();
         edges
     }
 }
