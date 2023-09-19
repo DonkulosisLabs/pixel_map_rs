@@ -295,13 +295,33 @@ impl<T: Copy + PartialEq, U: Unsigned + NumCast + Copy + Debug> PixelMap<T, U> {
         traversed
     }
 
+    /// Visit all nodes in this [PixelMap] that overlap with the given rectangle, controlling
+    /// navigation with the visitor return value.
     ///
+    /// # Parameters
+    ///
+    /// - `rect`: The rectangle in which contained or overlapping nodes will be visited.
+    /// - `visitor`: A closure that takes a reference to a node, and a reference to a
+    ///   rectangle as parameters. This rectangle represents the intersection of the node's
+    ///   region and the `rect` parameter supplied to this method. It returns `true` if the
+    ///   node's children should be visited, or `false` otherwise.
+    ///
+    /// # Returns
+    ///
+    /// The number of nodes traversed.
     #[inline]
-    pub fn visit_nodes_in_rect<F>(&self, rect: &URect, mut visitor: F)
+    pub fn visit_nodes_in_rect<F>(&self, rect: &URect, mut visitor: F) -> u32
     where
         F: FnMut(&PNode<T, U>, &URect) -> bool,
     {
-        self.root.visit_nodes_in_rect(rect, &mut visitor);
+        let rect = rect.intersect(self.map_rect());
+        if rect.is_empty() {
+            return 0;
+        }
+        let mut traversed = 0u32;
+        self.root
+            .visit_nodes_in_rect(&rect, &mut visitor, &mut traversed);
+        traversed
     }
 
     /// Determine if any of the leaf nodes within the bounds of the given rectangle match the predicate.
@@ -572,8 +592,9 @@ impl<T: Copy + PartialEq, U: Unsigned + NumCast + Copy + Debug> PixelMap<T, U> {
     #[must_use]
     pub fn stats(&self) -> Stats {
         let mut stats = Stats::default();
-        self.root
-            .visit_nodes_in_rect(&self.region().into(), &mut |node, _| {
+        self.root.visit_nodes_in_rect(
+            &self.region().into(),
+            &mut |node, _| {
                 stats.node_count += 1;
                 if node.is_leaf() {
                     stats.leaf_count += 1;
@@ -583,7 +604,9 @@ impl<T: Copy + PartialEq, U: Unsigned + NumCast + Copy + Debug> PixelMap<T, U> {
                     }
                 }
                 true
-            });
+            },
+            &mut 0,
+        );
         stats
     }
 

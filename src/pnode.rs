@@ -137,10 +137,12 @@ impl<T: Copy + PartialEq, U: Unsigned + NumCast + Copy + Debug> PNode<T, U> {
     }
 
     // Visit all nodes within the given rectangle boundary.
-    pub(super) fn visit_nodes_in_rect<F>(&self, rect: &URect, visitor: &mut F)
+    pub(super) fn visit_nodes_in_rect<F>(&self, rect: &URect, visitor: &mut F, traversed: &mut u32)
     where
         F: FnMut(&PNode<T, U>, &URect) -> bool,
     {
+        *traversed += 1;
+
         let sub_rect = self.region().intersect(rect);
         if !sub_rect.is_empty() {
             if !visitor(self, &sub_rect) {
@@ -148,7 +150,7 @@ impl<T: Copy + PartialEq, U: Unsigned + NumCast + Copy + Debug> PNode<T, U> {
             }
             if let PNodeKind::Branch(children) = &self.kind {
                 for child in children.as_ref() {
-                    child.visit_nodes_in_rect(&sub_rect, visitor);
+                    child.visit_nodes_in_rect(&sub_rect, visitor, traversed);
                 }
             }
         }
@@ -855,10 +857,14 @@ mod test {
         n.set_pixel((0, 1).into(), 1, true);
         n.set_pixel((1, 1).into(), 1, false);
         let mut count = 0;
-        n.visit_nodes_in_rect(&n.region().into(), &mut |_n, _r| {
-            count += 1;
-            true
-        });
+        n.visit_nodes_in_rect(
+            &n.region().into(),
+            &mut |_n, _r| {
+                count += 1;
+                true
+            },
+            &mut 0,
+        );
         assert_eq!(count, 5);
     }
 
