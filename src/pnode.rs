@@ -2,7 +2,7 @@
 use serde::{Deserialize, Serialize};
 
 use super::{ICircle, RayCast, RayCastContext, RayCastQuery, RayCastResult, Region};
-use crate::{distance_to, exclusive_urect, NodePath, Quadrant};
+use crate::{distance_to, exclusive_urect, NodePath, PNodeFill, Quadrant};
 use bevy_math::{URect, UVec2};
 use num_traits::{NumCast, Unsigned};
 use std::fmt::Debug;
@@ -130,27 +130,124 @@ impl<T: Copy + PartialEq, U: Unsigned + NumCast + Copy + Debug> PNode<T, U> {
     #[inline]
     #[must_use]
     pub fn is_leaf_parent(&self) -> bool {
-        return match &self.kind {
+        match &self.kind {
             PNodeKind::Leaf(_) => false,
             PNodeKind::Branch(children) => children.iter().all(|c| c.is_leaf()),
-        };
+        }
+    }
+
+    /// Determine how the node is filled (i.e. how child nodes are stored) based on the
+    /// given `predicate` closure.
+    ///
+    /// # Leaf Nodes
+    ///
+    /// A leaf node will be considered [PNodeFill::Full] if the predicate
+    /// returns `true` for that node, otherwise [PNodeFill::Empty].
+    ///
+    /// # Branch Nodes
+    ///
+    /// A branch node will produce a [PNodeFill] that reflects the quadrant(s) that are leaf nodes
+    /// and pass the predicate. In other words, any quadrants that are not represented by
+    /// the returned [PNodeFill] are either a complex sub-tree of nodes, or do not pass the
+    /// predicate.
+    pub fn node_fill_profile<F>(&self, mut predicate: F) -> PNodeFill
+    where
+        F: FnMut(&PNode<T, U>) -> bool,
+    {
+        if self.is_leaf() {
+            if predicate(self) {
+                PNodeFill::Full
+            } else {
+                PNodeFill::Empty
+            }
+        } else {
+            let children = self.children();
+
+            let mut check_quadrant = |q: Quadrant| {
+                let child = &children[q as usize];
+                child.is_leaf() && predicate(child)
+            };
+
+            let (bl, br, tl, tr) = (
+                check_quadrant(Quadrant::BottomLeft),
+                check_quadrant(Quadrant::BottomRight),
+                check_quadrant(Quadrant::TopLeft),
+                check_quadrant(Quadrant::TopRight),
+            );
+
+            match (bl, br, tl, tr) {
+                (true, true, true, true) => PNodeFill::Full,
+                (false, false, false, false) => PNodeFill::Empty,
+                (true, false, false, false) => PNodeFill::BottomLeft,
+                (false, true, false, false) => PNodeFill::BottomRight,
+                (false, false, true, false) => PNodeFill::TopLeft,
+                (false, false, false, true) => PNodeFill::TopRight,
+                (true, true, false, false) => PNodeFill::Bottom,
+                (false, false, true, true) => PNodeFill::Top,
+                (true, false, true, false) => PNodeFill::Left,
+                (false, true, false, true) => PNodeFill::Right,
+                (true, false, false, true) => PNodeFill::BottomLeftTopRight,
+                (false, true, true, false) => PNodeFill::BottomRightTopLeft,
+                (false, true, true, true) => PNodeFill::NotBottomLeft,
+                (true, false, true, true) => PNodeFill::NotBottomRight,
+                (true, true, false, true) => PNodeFill::NotTopLeft,
+                (true, true, true, false) => PNodeFill::NotTopRight,
+            }
+        }
+    }
+
+    /// If a rectangle can contour the given `fill` pattern without gaps, return that rectangle
+    /// representation for this node's region. Otherwise, return `None`.
+    pub fn node_fill_rect(&self, fill: PNodeFill) -> Option<URect> {
+        if let Some(q) = fill.quadrant() {
+            return Some(self.children()[q as usize].region().into());
+        }
+        match fill {
+            PNodeFill::Full => Some(self.region().into()),
+            PNodeFill::Bottom => {
+                let children = self.children();
+                let bottom_left = children[Quadrant::BottomLeft as usize].region().as_urect();
+                let bottom_right = children[Quadrant::BottomRight as usize].region().as_urect();
+                Some(URect::from_corners(bottom_left.min, bottom_right.max))
+            }
+            PNodeFill::Top => {
+                let children = self.children();
+                let top_left = children[Quadrant::TopLeft as usize].region().as_urect();
+                let top_right = children[Quadrant::TopRight as usize].region().as_urect();
+                Some(URect::from_corners(top_left.min, top_right.max))
+            }
+            PNodeFill::Left => {
+                let children = self.children();
+                let bottom_left = children[Quadrant::BottomLeft as usize].region().as_urect();
+                let top_left = children[Quadrant::TopLeft as usize].region().as_urect();
+                Some(URect::from_corners(bottom_left.min, top_left.max))
+            }
+            PNodeFill::Right => {
+                let children = self.children();
+                let bottom_right = children[Quadrant::BottomRight as usize].region().as_urect();
+                let top_right = children[Quadrant::TopRight as usize].region().as_urect();
+                Some(URect::from_corners(bottom_right.min, top_right.max))
+            }
+            _ => None,
+        }
     }
 
     // Visit all nodes within the given rectangle boundary.
     pub(super) fn visit_nodes_in_rect<F>(&self, rect: &URect, visitor: &mut F, traversed: &mut u32)
     where
-        F: FnMut(&PNode<T, U>, &URect) -> bool,
+        F: FnMut(&PNode<T, U>, &URect) -> PNodeFill,
     {
         *traversed += 1;
 
         let sub_rect = self.region().intersect(rect);
         if !sub_rect.is_empty() {
-            if !visitor(self, &sub_rect) {
-                return;
-            }
+            let node_profile = visitor(self, &sub_rect);
             if let PNodeKind::Branch(children) = &self.kind {
-                for child in children.as_ref() {
-                    child.visit_nodes_in_rect(&sub_rect, visitor, traversed);
+                let node_profile = node_profile as u8;
+                for q in Quadrant::iter() {
+                    if node_profile & q.as_bit() != 0 {
+                        children[q as usize].visit_nodes_in_rect(rect, visitor, traversed);
+                    }
                 }
             }
         }
@@ -684,7 +781,6 @@ pub enum NeighborOrientation {
 #[cfg(test)]
 mod test {
     use super::*;
-    use crate::Quadrant;
 
     #[test]
     fn test_subdivide() {
@@ -861,7 +957,7 @@ mod test {
             &n.region().into(),
             &mut |_n, _r| {
                 count += 1;
-                true
+                PNodeFill::Full
             },
             &mut 0,
         );

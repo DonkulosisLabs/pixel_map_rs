@@ -2,7 +2,7 @@
 use serde::{Deserialize, Serialize};
 
 use super::{ICircle, PNode, RayCast, RayCastContext, RayCastQuery, RayCastResult, Region};
-use crate::{urect_points, NeighborOrientation, NodePath, Shape, ULine};
+use crate::{urect_points, NeighborOrientation, NodePath, PNodeFill, Shape, ULine};
 use bevy_math::{uvec2, IVec2, URect, UVec2};
 use num_traits::{NumCast, Unsigned};
 use std::collections::HashSet;
@@ -303,8 +303,8 @@ impl<T: Copy + PartialEq, U: Unsigned + NumCast + Copy + Debug> PixelMap<T, U> {
     /// - `rect`: The rectangle in which contained or overlapping nodes will be visited.
     /// - `visitor`: A closure that takes a reference to a node, and a reference to a
     ///   rectangle as parameters. This rectangle represents the intersection of the node's
-    ///   region and the `rect` parameter supplied to this method. It returns `true` if the
-    ///   node's children should be visited, or `false` otherwise.
+    ///   region and the `rect` parameter supplied to this method. It returns a [PNodeFill]
+    ///   that denotes which child nodes should be visited.
     ///
     /// # Returns
     ///
@@ -312,7 +312,7 @@ impl<T: Copy + PartialEq, U: Unsigned + NumCast + Copy + Debug> PixelMap<T, U> {
     #[inline]
     pub fn visit_nodes_in_rect<F>(&self, rect: &URect, mut visitor: F) -> u32
     where
-        F: FnMut(&PNode<T, U>, &URect) -> bool,
+        F: FnMut(&PNode<T, U>, &URect) -> PNodeFill,
     {
         let rect = rect.intersect(self.map_rect());
         if rect.is_empty() {
@@ -603,7 +603,7 @@ impl<T: Copy + PartialEq, U: Unsigned + NumCast + Copy + Debug> PixelMap<T, U> {
                         stats.unit_count += 1;
                     }
                 }
-                true
+                PNodeFill::Full
             },
             &mut 0,
         );
