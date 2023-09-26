@@ -198,10 +198,7 @@ impl<T: Copy + PartialEq, U: Unsigned + NumCast + Copy + Debug> PNode<T, U> {
 
     /// If a rectangle can contour the given `fill` pattern without gaps, return that rectangle
     /// representation for this node's region. Otherwise, return `None`.
-    pub fn node_fill_rect(
-        &self,
-        fill: PNodeFill,
-    ) -> Option<URect> {
+    pub fn node_fill_rect(&self, fill: PNodeFill) -> Option<URect> {
         if let Some(q) = fill.quadrant() {
             return Some(self.children()[q as usize].region().into());
         }
