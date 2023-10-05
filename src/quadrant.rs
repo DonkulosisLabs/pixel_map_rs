@@ -3,7 +3,7 @@ use serde::{Deserialize, Serialize};
 use std::fmt::Debug;
 
 use crate::Direction;
-use bevy_math::UVec2;
+use bevy_math::{IVec2, UVec2};
 
 /// A quadrant in a box.
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
@@ -38,9 +38,30 @@ impl Quadrant {
     /// Returns the quadrant for the given point in relation to the given center point.
     #[inline]
     #[must_use]
-    pub fn for_point<P>(point: P, center: u32) -> Quadrant
+    pub fn for_upoint<P>(point: P, center: u32) -> Quadrant
     where
         P: Into<UVec2>,
+    {
+        let point = point.into();
+        if point.x < center {
+            if point.y >= center {
+                Quadrant::TopLeft
+            } else {
+                Quadrant::BottomLeft
+            }
+        } else if point.y >= center {
+            Quadrant::TopRight
+        } else {
+            Quadrant::BottomRight
+        }
+    }
+
+    /// Returns the quadrant for the given point in relation to the given center point.
+    #[inline]
+    #[must_use]
+    pub fn for_ipoint<P>(point: P, center: i32) -> Quadrant
+    where
+        P: Into<IVec2>,
     {
         let point = point.into();
         if point.x < center {
@@ -232,11 +253,19 @@ mod test {
     use crate::PNodeFill;
 
     #[test]
-    fn test_for_point() {
-        assert_eq!(Quadrant::for_point((0, 0), 1), Quadrant::BottomLeft);
-        assert_eq!(Quadrant::for_point((1, 0), 1), Quadrant::BottomRight);
-        assert_eq!(Quadrant::for_point((0, 1), 1), Quadrant::TopLeft);
-        assert_eq!(Quadrant::for_point((1, 1), 1), Quadrant::TopRight);
+    fn test_for_upoint() {
+        assert_eq!(Quadrant::for_upoint((0, 0), 1), Quadrant::BottomLeft);
+        assert_eq!(Quadrant::for_upoint((1, 0), 1), Quadrant::BottomRight);
+        assert_eq!(Quadrant::for_upoint((0, 1), 1), Quadrant::TopLeft);
+        assert_eq!(Quadrant::for_upoint((1, 1), 1), Quadrant::TopRight);
+    }
+
+    #[test]
+    fn test_for_ipoint() {
+        assert_eq!(Quadrant::for_ipoint((0, 0), 1), Quadrant::BottomLeft);
+        assert_eq!(Quadrant::for_ipoint((1, 0), 1), Quadrant::BottomRight);
+        assert_eq!(Quadrant::for_ipoint((0, 1), 1), Quadrant::TopLeft);
+        assert_eq!(Quadrant::for_ipoint((1, 1), 1), Quadrant::TopRight);
     }
 
     #[test]

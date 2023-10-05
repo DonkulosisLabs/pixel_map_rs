@@ -1,7 +1,7 @@
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
 
-use bevy_math::{IVec2, UVec2};
+use bevy_math::{uvec2, IVec2, UVec2};
 
 pub const NORTH: IVec2 = IVec2 { x: 0, y: 1 };
 pub const NORTH_EAST: IVec2 = IVec2 { x: 1, y: 1 };
@@ -27,6 +27,49 @@ pub enum Direction {
 }
 
 impl Direction {
+    /// Iterate N, E, S, W directions.
+    #[inline]
+    pub fn iter_cardinal() -> impl Iterator<Item = Direction> {
+        [
+            Direction::North,
+            Direction::East,
+            Direction::South,
+            Direction::West,
+        ]
+        .iter()
+        .copied()
+    }
+
+    /// Iterate NE, NW, SE, SW directions.
+    #[inline]
+    pub fn iter_diagonal() -> impl Iterator<Item = Direction> {
+        [
+            Direction::NorthEast,
+            Direction::NorthWest,
+            Direction::SouthEast,
+            Direction::SouthWest,
+        ]
+        .iter()
+        .copied()
+    }
+
+    /// Iterate both cardinal and diagonal directions.
+    #[inline]
+    pub fn iter_cardinal_diagonal() -> impl Iterator<Item = Direction> {
+        [
+            Direction::North,
+            Direction::East,
+            Direction::South,
+            Direction::West,
+            Direction::NorthEast,
+            Direction::NorthWest,
+            Direction::SouthEast,
+            Direction::SouthWest,
+        ]
+        .iter()
+        .copied()
+    }
+
     /// Returns the unit vector for this direction.
     #[inline]
     #[must_use]
@@ -46,8 +89,25 @@ impl Direction {
     /// Move a point in this direction by the given amount.
     #[inline]
     #[must_use]
-    pub fn move_point(&self, point: UVec2, by: u32) -> UVec2 {
-        (point.as_ivec2() + self.unit() * by as i32).as_uvec2()
+    pub fn move_ipoint(&self, point: IVec2, by: i32) -> IVec2 {
+        point + self.unit() * by
+    }
+
+    /// Move a point in this direction by the given amount.
+    /// Limits the lower bounds to zero.
+    #[inline]
+    #[must_use]
+    pub fn move_upoint(&self, point: UVec2, by: u32) -> UVec2 {
+        let r = point.as_ivec2() + self.unit() * by as i32;
+        if r.x < 0 || r.y < 0 {
+            UVec2::default()
+        } else if r.x < 0 {
+            uvec2(0, r.y as u32)
+        } else if r.y < 0 {
+            uvec2(r.x as u32, 0)
+        } else {
+            r.as_uvec2()
+        }
     }
 
     /// Returns true if this direction is cardinal (N, E, S, W).

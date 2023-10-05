@@ -2,7 +2,7 @@
 use serde::{Deserialize, Serialize};
 
 use super::{ICircle, RayCast, RayCastContext, RayCastQuery, RayCastResult, Region};
-use crate::{distance_to, exclusive_urect, NodePath, PNodeFill, Quadrant};
+use crate::{distance_to_ipoint, exclusive_urect, NodePath, PNodeFill, Quadrant};
 use bevy_math::{URect, UVec2};
 use num_traits::{NumCast, Unsigned};
 use std::fmt::Debug;
@@ -377,7 +377,7 @@ impl<T: Copy + PartialEq, U: Unsigned + NumCast + Copy + Debug> PNode<T, U> {
         let mut node = self;
         loop {
             if let PNodeKind::Branch(children) = &node.kind {
-                let q = node.region.quadrant_for(point);
+                let q = node.region.quadrant_for_upoint(point);
                 node = &children[q as usize];
             } else {
                 return node;
@@ -393,7 +393,7 @@ impl<T: Copy + PartialEq, U: Unsigned + NumCast + Copy + Debug> PNode<T, U> {
         let mut path = 0;
         loop {
             if let PNodeKind::Branch(children) = &node.kind {
-                let q = node.region.quadrant_for(point);
+                let q = node.region.quadrant_for_upoint(point);
                 path |= (q as u64) << (depth * 2);
                 depth += 1;
                 node = &children[q as usize];
@@ -443,10 +443,10 @@ impl<T: Copy + PartialEq, U: Unsigned + NumCast + Copy + Debug> PNode<T, U> {
         loop {
             ctx.traversed += 1;
             let current_point = ctx.line_iter.peek()?;
-            if self.region.contains(current_point) {
+            if self.region.contains_ipoint(current_point) {
                 match self.kind {
                     PNodeKind::Branch(ref children) => {
-                        let q = self.region.quadrant_for(current_point);
+                        let q = self.region.quadrant_for_ipoint(current_point);
                         let result = children[q as usize].ray_cast(query, ctx, visitor);
                         if result.is_some() {
                             return result;
@@ -460,9 +460,10 @@ impl<T: Copy + PartialEq, U: Unsigned + NumCast + Copy + Debug> PNode<T, U> {
                                 continue;
                             }
                             RayCast::Hit => {
-                                let distance = distance_to(query.line.start(), current_point);
+                                let distance =
+                                    distance_to_ipoint(query.line.start(), current_point);
                                 let result = RayCastResult {
-                                    collision_point: Some(current_point),
+                                    collision_point: Some(current_point.as_uvec2()),
                                     distance,
                                     traversed: ctx.traversed,
                                 };
@@ -478,7 +479,7 @@ impl<T: Copy + PartialEq, U: Unsigned + NumCast + Copy + Debug> PNode<T, U> {
     }
 
     pub(super) fn set_pixel(&mut self, point: UVec2, pixel_size: u8, value: T) -> bool {
-        if self.region.contains(point) {
+        if self.region.contains_upoint(point) {
             if self.is_leaf() && &value == self.value() {
                 return true;
             }
@@ -486,7 +487,7 @@ impl<T: Copy + PartialEq, U: Unsigned + NumCast + Copy + Debug> PNode<T, U> {
                 self.set_value(value);
             } else {
                 self.subdivide();
-                let q = self.region.quadrant_for(point);
+                let q = self.region.quadrant_for_upoint(point);
                 self.children_mut()[q as usize].set_pixel(point, pixel_size, value);
                 self.decimate();
                 self.recalc_dirty();
