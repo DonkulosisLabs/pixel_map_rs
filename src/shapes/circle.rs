@@ -121,6 +121,19 @@ impl From<&IRect> for ICircle {
     }
 }
 
+impl From<URect> for ICircle {
+    #[inline]
+    fn from(rect: URect) -> Self {
+        ICircle::from(&rect)
+    }
+}
+impl From<&URect> for ICircle {
+    #[inline]
+    fn from(rect: &URect) -> Self {
+        Self::from(rect.as_urect() /* BUG! Rename to as_irect() */)
+    }
+}
+
 pub struct CroppedCirclePixelIterator {
     inner: ICirclePixelIterator,
 }
