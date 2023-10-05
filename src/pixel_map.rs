@@ -2,8 +2,8 @@
 use serde::{Deserialize, Serialize};
 
 use super::{ICircle, PNode, RayCast, RayCastContext, RayCastQuery, RayCastResult, Region};
-use crate::{urect_points, NeighborOrientation, NodePath, PNodeFill, Shape, ULine};
-use bevy_math::{uvec2, IVec2, URect, UVec2};
+use crate::{iline, urect_points, ILine, NeighborOrientation, NodePath, PNodeFill};
+use bevy_math::{ivec2, IVec2, URect, UVec2};
 use num_traits::{NumCast, Unsigned};
 use std::collections::HashSet;
 use std::fmt::{Debug, Formatter};
@@ -184,20 +184,14 @@ impl<T: Copy + PartialEq, U: Unsigned + NumCast + Copy + Debug> PixelMap<T, U> {
     }
 
     #[inline]
-    pub fn draw(&mut self, shape: &Shape, value: T) -> bool {
-        match shape {
-            Shape::Point { point } => self.set_pixel(*point, value),
-            Shape::Line { line } => self.draw_line(line, value),
-            Shape::Rectangle { rect } => self.draw_rect(rect, value),
-            Shape::Circle { circle } => self.draw_circle(circle, value),
-        }
-    }
-
-    #[inline]
-    pub fn draw_line(&mut self, line: &ULine, value: T) -> bool {
-        if line.intersects_rect(&self.map_rect()) {
+    pub fn draw_line(&mut self, line: &ILine, value: T) -> bool {
+        if line.intersects_rect(
+            &self.map_rect().as_urect(), /* BUG! Rename to as_irect() */
+        ) {
             for p in line.pixels() {
-                self.set_pixel(p, value);
+                if p.x >= 0 && p.y >= 0 {
+                    self.set_pixel(p.as_uvec2(), value);
+                }
             }
             true
         } else {
@@ -724,7 +718,7 @@ impl<T: Copy + PartialEq, U: Unsigned + NumCast + Copy + Debug> PixelMap<T, U> {
     /// A list of line segments that contour the shapes determined by the given
     /// `predicate` closure. Returned line segments are non-contiguous; this is *not* a polyline.
     #[must_use]
-    pub fn contour<F>(&self, rect: &URect, mut predicate: F) -> Vec<ULine>
+    pub fn contour<F>(&self, rect: &URect, mut predicate: F) -> Vec<ILine>
     where
         F: FnMut(&PNode<T, U>, &URect) -> bool,
     {
@@ -733,7 +727,7 @@ impl<T: Copy + PartialEq, U: Unsigned + NumCast + Copy + Debug> PixelMap<T, U> {
             return vec![];
         }
 
-        let mut edges: Vec<ULine> = Vec::with_capacity(1024);
+        let mut edges: Vec<ILine> = Vec::with_capacity(1024);
 
         self.root
             .visit_neighbor_pairs_face(&sub_rect, &mut |or, a, a_rect, b, b_rect| {
@@ -743,17 +737,23 @@ impl<T: Copy + PartialEq, U: Unsigned + NumCast + Copy + Debug> PixelMap<T, U> {
                         if predicate(left, left_rect) != predicate(right, right_rect) {
                             // right edge of the left node
                             let left = left.region().as_urect();
-                            let left_right_edge =
-                                ULine::new(uvec2(left.max.x, left.min.y), left.max);
-                            let left_right_edge =
-                                left_right_edge.axis_aligned_intersect_rect(left_rect);
+                            let left_right_edge = iline(
+                                ivec2(left.max.x as i32, left.min.y as i32),
+                                left.max.as_ivec2(),
+                            );
+                            let left_right_edge = left_right_edge.axis_aligned_intersect_rect(
+                                &left_rect.as_urect(), /* BUG! Rename to as_irect() */
+                            );
 
                             // left edge of the right node
                             let right = right.region().as_urect();
-                            let right_left_edge =
-                                ULine::new(right.min, uvec2(right.min.x, right.max.y));
-                            let right_left_edge =
-                                right_left_edge.axis_aligned_intersect_rect(right_rect);
+                            let right_left_edge = iline(
+                                right.min.as_ivec2(),
+                                ivec2(right.min.x as i32, right.max.y as i32),
+                            );
+                            let right_left_edge = right_left_edge.axis_aligned_intersect_rect(
+                                &right_rect.as_urect(), /* BUG! Rename to as_irect() */
+                            );
 
                             if let (Some(left_right_edge), Some(right_left_edge)) =
                                 (left_right_edge, right_left_edge)
@@ -770,16 +770,23 @@ impl<T: Copy + PartialEq, U: Unsigned + NumCast + Copy + Debug> PixelMap<T, U> {
                         if predicate(bottom, bottom_rect) != predicate(top, top_rect) {
                             // top edge of the bottom node
                             let bottom = bottom.region().as_urect();
-                            let bottom_top_edge =
-                                ULine::new(uvec2(bottom.min.x, bottom.max.y), bottom.max);
-                            let bottom_top_edge =
-                                bottom_top_edge.axis_aligned_intersect_rect(bottom_rect);
+                            let bottom_top_edge = iline(
+                                ivec2(bottom.min.x as i32, bottom.max.y as i32),
+                                bottom.max.as_ivec2(),
+                            );
+                            let bottom_top_edge = bottom_top_edge.axis_aligned_intersect_rect(
+                                &bottom_rect.as_urect(), /* BUG! Rename to as_irect() */
+                            );
 
                             // bottom edge of the top node
                             let top = top.region().as_urect();
-                            let top_bottom_edge = ULine::new(top.min, uvec2(top.max.x, top.min.y));
-                            let top_bottom_edge =
-                                top_bottom_edge.axis_aligned_intersect_rect(top_rect);
+                            let top_bottom_edge = iline(
+                                top.min.as_ivec2(),
+                                ivec2(top.max.x as i32, top.min.y as i32),
+                            );
+                            let top_bottom_edge = top_bottom_edge.axis_aligned_intersect_rect(
+                                &top_rect.as_urect(), /* BUG! Rename to as_irect() */
+                            );
 
                             if let (Some(bottom_top_edge), Some(top_bottom_edge)) =
                                 (bottom_top_edge, top_bottom_edge)

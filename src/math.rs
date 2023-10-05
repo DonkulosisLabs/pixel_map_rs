@@ -1,18 +1,32 @@
-use super::ULine;
-use bevy_math::{uvec2, IRect, IVec2, URect, UVec2};
+use crate::{iline, ILine};
+use bevy_math::{ivec2, uvec2, IRect, IVec2, URect, UVec2};
 
 /// Find the distance squared between two points.
 #[inline]
 #[must_use]
-pub fn distance_squared_to(a: UVec2, b: UVec2) -> f32 {
+pub fn distance_squared_to_upoint(a: UVec2, b: UVec2) -> f32 {
     a.as_vec2().distance_squared(b.as_vec2())
 }
 
 /// Find the distance between two points.
 #[inline]
 #[must_use]
-pub fn distance_to(a: UVec2, b: UVec2) -> f32 {
-    distance_squared_to(a, b).sqrt()
+pub fn distance_to_upoint(a: UVec2, b: UVec2) -> f32 {
+    distance_squared_to_upoint(a, b).sqrt()
+}
+
+/// Find the distance squared between two points.
+#[inline]
+#[must_use]
+pub fn distance_squared_to_ipoint(a: IVec2, b: IVec2) -> f32 {
+    a.as_vec2().distance_squared(b.as_vec2())
+}
+
+/// Find the distance between two points.
+#[inline]
+#[must_use]
+pub fn distance_to_ipoint(a: IVec2, b: IVec2) -> f32 {
+    distance_squared_to_ipoint(a, b).sqrt()
 }
 
 /// Get the four points that make up the corners of the given `rect`.
@@ -30,14 +44,16 @@ pub fn urect_points(rect: &URect) -> [UVec2; 4] {
 /// Get the four lines that make up the edges of this rectangle.
 #[inline]
 #[must_use]
-pub fn urect_edges(rect: &URect) -> [ULine; 4] {
+pub fn irect_edges(rect: &IRect) -> [ILine; 4] {
+    let min = rect.min;
+    let max = rect.max;
     let width = rect.width();
     let height = rect.height();
     [
-        ULine::new(rect.min, rect.min + uvec2(width, 0)),
-        ULine::new(rect.min + uvec2(width, 0), rect.max),
-        ULine::new(rect.max, rect.min + uvec2(0, height)),
-        ULine::new(rect.min + uvec2(0, height), rect.min),
+        iline(min, min + ivec2(width, 0)),
+        iline(min + ivec2(width, 0), max),
+        iline(max, min + ivec2(0, height)),
+        iline(min + ivec2(0, height), min),
     ]
 }
 
@@ -50,6 +66,18 @@ pub fn to_cropped_urect(rect: &IRect) -> URect {
         rect.min.max(IVec2::ZERO).as_uvec2(),
         rect.max.max(IVec2::ZERO).as_uvec2(),
     )
+}
+
+/// Subtract one from the maximum point of the given `rect`, allowing
+/// for exclusive handling with `contains`, for example.
+#[inline]
+#[must_use]
+pub fn exclusive_irect(rect: &IRect) -> IRect {
+    if rect.is_empty() {
+        return *rect;
+    }
+    let max = rect.max - IVec2::ONE;
+    IRect::from_corners(rect.min, max.max(rect.min))
 }
 
 /// Subtract one from the maximum point of the given `rect`, allowing
