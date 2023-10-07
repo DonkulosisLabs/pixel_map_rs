@@ -1,6 +1,6 @@
 [package]
 name = "pixel_map"
-description = "A map of pixels implemented by an MX quad tree."
+description = "A map of pixels implemented by an MX quadtree."
 version = "0.2.0"
 authors = ["Troy Kinsella"]
 homepage = "https://github.com/DonkulosisLabs/pixel_map_rs"
@@ -12,7 +12,7 @@ keywords = ["pixel", "map", "image", "quadtree", "data-structure"]
 categories = ["data-structures", "multimedia::images"]
 
 [dependencies]
-bevy_math = "^0.11.2"
+bevy_math = "^0.11.3"
 num-traits = "^0.2.16"
 serde = { version = "^1.0.180", features = ["derive"], optional = true, default-features = false }
 

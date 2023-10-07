@@ -122,7 +122,7 @@ impl Quadrant {
     }
 }
 
-/// A [PixelMap] quad tree node fill pattern, regarding child node storage.
+/// A [PixelMap] quadtree node fill pattern, regarding child node storage.
 #[derive(Debug, Copy, Clone, PartialEq)]
 #[repr(u8)]
 pub enum PNodeFill {

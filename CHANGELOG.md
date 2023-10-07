@@ -8,12 +8,12 @@
   dimensions, and ensures the map space is always (0, 0) at the bottom left corner.
 * Add `PixelMap::map_size` to store a logical size for the map that is not restrained by the requirements
   of the underlying node implementation, which requires dimensions that are square and powers of two.
-* Refactor shapes to be represented in unsigned space.
 * Add `PixelMap::contour` method to obtain a list of line segments that contour a shape.
 * Add `PNode::node_fill_profile(...) -> PNodeFill` for better understanding how a node is populated
   with pixel data.
 * Allow more advanced tree navigation by producing a `PNodeFill` from a `PixelMap::visit_nodes_in_rect`
   visitor closure, rather than a `bool`, which controls child node visitation.
+* Remove `Shape` enum.
 
 ## v0.2.0
 

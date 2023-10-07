@@ -9,7 +9,7 @@ use std::collections::HashSet;
 use std::fmt::{Debug, Formatter};
 use std::hash::BuildHasher;
 
-/// A two-dimensional map of pixels implemented by an MX quad tree.
+/// A two-dimensional map of pixels implemented by an MX quadtree.
 /// The coordinate origin is at the bottom left.
 ///
 /// # Type Parameters
@@ -83,7 +83,7 @@ impl<T: Copy + PartialEq, U: Unsigned + NumCast + Copy + Debug> PixelMap<T, U> {
         self.pixel_size
     }
 
-    /// Obtain the region that this [PixelMap]'s quad tree root node covers.
+    /// Obtain the region that this [PixelMap]'s quadtree root node covers.
     /// This value differs from `map_size` in that it the nearest power of two larger
     /// than the map size, and it is square.
     #[inline]
@@ -238,7 +238,7 @@ impl<T: Copy + PartialEq, U: Unsigned + NumCast + Copy + Debug> PixelMap<T, U> {
             return false;
         }
         // Implementation note: Despite the aabb check, this still allows drawing circle pixels
-        // beyond the map bounds, within the quad tree region space. Fix me.
+        // beyond the map bounds, within the quadtree region space. Fix me.
         self.root.draw_circle(circle, self.pixel_size, value);
         true
     }
@@ -376,7 +376,7 @@ impl<T: Copy + PartialEq, U: Unsigned + NumCast + Copy + Debug> PixelMap<T, U> {
 
     /// Visit all leaf nodes in this [PixelMap] that are marked as dirty. This is useful for examining
     /// only leaf nodes that have changed (became dirty), and to limit time spent traversing
-    /// the quad tree. Dirty status is not changed.
+    /// the quadtree. Dirty status is not changed.
     ///
     /// # Parameters
     ///
@@ -400,7 +400,7 @@ impl<T: Copy + PartialEq, U: Unsigned + NumCast + Copy + Debug> PixelMap<T, U> {
 
     /// Visit dirty leaf nodes in this [PixelMap] that overlap with the given rectangle.
     /// This is useful for examining only leaf nodes that have changed (became dirty), and to
-    /// limit time spent traversing the quad tree. Dirty status is not changed.
+    /// limit time spent traversing the quadtree. Dirty status is not changed.
     ///
     /// # Parameters
     ///
@@ -438,7 +438,7 @@ impl<T: Copy + PartialEq, U: Unsigned + NumCast + Copy + Debug> PixelMap<T, U> {
     /// Visit all leaf nodes in this [PixelMap] that are marked as dirty, and consume
     /// their dirty status (by modifying their dirty state to be `false`). This is useful for operating
     /// only on leaf nodes that have changed (became dirty), and to limit time spent traversing
-    /// the quad tree.
+    /// the quadtree.
     ///
     /// # Parameters
     ///
@@ -578,7 +578,7 @@ impl<T: Copy + PartialEq, U: Unsigned + NumCast + Copy + Debug> PixelMap<T, U> {
         }
     }
 
-    /// Collect statistics by traversing the [PixelMap] quad tree.
+    /// Collect statistics by traversing the [PixelMap] quadtree.
     ///
     /// # Returns
     ///
@@ -818,13 +818,13 @@ impl<T: Copy + PartialEq, U: Unsigned + NumCast + Copy + Debug> Debug for PixelM
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[derive(Debug, Default, Eq, PartialEq)]
 pub struct Stats {
-    /// The number of nodes in the quad tree.
+    /// The number of nodes in the quadtree.
     pub node_count: usize,
 
-    /// The number of leaf nodes in the quad tree.
+    /// The number of leaf nodes in the quadtree.
     pub leaf_count: usize,
 
-    /// The number of leaf nodes in the quad tree for which the region is a unit pixel size.
+    /// The number of leaf nodes in the quadtree for which the region is a unit pixel size.
     /// The unit size is defined by the `pixel_size` parameter of the [PixelMap] constructor.
     pub unit_count: usize,
 }
