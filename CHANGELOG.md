@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## v0.3.0
+
 * `PixelMap::collect_points` supports non-default hasher with point `HashSet`.
 * Substitute `bevy_math` for `glam`, in order to use established `IRect`.
 * `PixelMap::new` accepts a `UVec2` rather than a `Region` to specify the map size. This allows non-square 
