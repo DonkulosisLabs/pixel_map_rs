@@ -2,9 +2,12 @@
 use serde::{Deserialize, Serialize};
 
 use super::{ICircle, PNode, RayCast, RayCastContext, RayCastQuery, RayCastResult, Region};
-use crate::{iline, urect_points, ILine, NeighborOrientation, NodePath, PNodeFill};
+use crate::{
+    exclusive_urect, iline, to_cropped_urect, urect_points, ILine, NeighborOrientation, NodePath,
+    PNodeFill, RotatedIRect,
+};
 use bevy_math::{ivec2, IVec2, URect, UVec2};
-use num_traits::{NumCast, Unsigned};
+use num_traits::{NumCast, Unsigned, Zero};
 use std::collections::HashSet;
 use std::fmt::{Debug, Formatter};
 use std::hash::BuildHasher;
@@ -15,7 +18,7 @@ use std::hash::BuildHasher;
 /// # Type Parameters
 ///
 /// - `T`: The type of pixel data. By default a `bool`, to denote the pixel is on or off.
-///   A more useful type could be a Color.
+///   A more useful type could be a `Color`.
 /// - `U`: The unsigned integer type of the coordinates used to index the pixels, typically `u16` (default), or `u32`.
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[derive(Clone, PartialEq)]
@@ -167,7 +170,7 @@ impl<T: Copy + PartialEq, U: Unsigned + NumCast + Copy + Debug> PixelMap<T, U> {
     ///
     /// # Returns
     ///
-    /// If the coordinates are outside the region covered by this [PixelMap], `false` is returned.
+    /// If the coordinates are outside the [PixelMap::map_rect], `false` is returned.
     /// Otherwise, `true` is returned.
     #[inline]
     pub fn set_pixel<P>(&mut self, point: P, value: T) -> bool
@@ -183,23 +186,31 @@ impl<T: Copy + PartialEq, U: Unsigned + NumCast + Copy + Debug> PixelMap<T, U> {
         }
     }
 
+    /// Set the value of all pixel coordinates yielded by the given iterator.
+    ///
+    /// # Parameters
+    ///
+    /// - `points`: An iterator that yields pixel coordinates.
+    ///
+    /// # Returns
+    ///
+    /// If any of the coordinates are inside the [PixelMap::map_rect],
+    /// `true` is returned, `false` otherwise.
     #[inline]
-    pub fn draw_line(&mut self, line: &ILine, value: T) -> bool {
-        if line.intersects_rect(
-            &self.map_rect().as_urect(), /* BUG! Rename to as_irect() */
-        ) {
-            for p in line.pixels() {
-                if p.x >= 0 && p.y >= 0 {
-                    self.set_pixel(p.as_uvec2(), value);
-                }
+    pub fn set_pixels<I>(&mut self, points: I, value: T) -> bool
+    where
+        I: Iterator<Item = UVec2>,
+    {
+        let mut changed = false;
+        for point in points {
+            if self.set_pixel(point, value) {
+                changed = true;
             }
-            true
-        } else {
-            false
         }
+        changed
     }
 
-    /// Set the color of the pixels within the given rectangle.
+    /// Set the value of the pixels within the given rectangle.
     ///
     /// # Parameters
     ///
@@ -208,8 +219,7 @@ impl<T: Copy + PartialEq, U: Unsigned + NumCast + Copy + Debug> PixelMap<T, U> {
     ///
     /// # Returns
     ///
-    /// If the rectangle does not overlap
-    /// the region covered by this [PixelMap], false is returned. Otherwise, true is returned.
+    /// If the rectangle overlaps the [PixelMap::map_rect], `true` is returned. Otherwise, `false` is returned.
     #[inline]
     pub fn draw_rect(&mut self, rect: &URect, value: T) -> bool {
         let rect = rect.intersect(self.map_rect());
@@ -220,7 +230,38 @@ impl<T: Copy + PartialEq, U: Unsigned + NumCast + Copy + Debug> PixelMap<T, U> {
         true
     }
 
-    /// Set the color of the pixels within the given circle.
+    /// Set the value of the pixels within the given rotated rectangle.
+    ///
+    /// # Parameters
+    ///
+    /// - `rrect`: The rotated rectangle in which pixels will be set to associated value.
+    /// - `value`: The value to assign to the pixels within the given rectangle.
+    ///
+    /// # Returns
+    ///
+    /// If the rectangle overlaps the [PixelMap::map_rect], `true` is returned. Otherwise, `false` is returned.
+    #[inline]
+    pub fn draw_rotated_rect(&mut self, rrect: &RotatedIRect, value: T) -> bool {
+        if rrect.rotation.is_zero() {
+            return self.draw_rect(&to_cropped_urect(&rrect.rect), value);
+        }
+        let rect = rrect.aabb().intersect(self.map_rect().as_urect() /* fak */);
+        if rect.is_empty() {
+            return false;
+        }
+        let inner_rect = to_cropped_urect(&rrect.inner_rect());
+        self.root.draw_rect(&inner_rect, self.pixel_size, value);
+        let inner_rect = exclusive_urect(&inner_rect);
+        for point in rrect.unsigned_pixels() {
+            if inner_rect.contains(point) {
+                continue;
+            }
+            self.set_pixel(point, value);
+        }
+        true
+    }
+
+    /// Set the value of the pixels within the given circle.
     ///
     /// # Parameters
     ///
@@ -233,7 +274,8 @@ impl<T: Copy + PartialEq, U: Unsigned + NumCast + Copy + Debug> PixelMap<T, U> {
     /// the region covered by this [PixelMap], false is returned. Otherwise, true is returned.
     #[inline]
     pub fn draw_circle(&mut self, circle: &ICircle, value: T) -> bool {
-        let rect = circle.aabb().intersect(self.map_rect());
+        let aabb = to_cropped_urect(&circle.aabb());
+        let rect = aabb.intersect(self.map_rect());
         if rect.is_empty() {
             return false;
         }
@@ -670,8 +712,8 @@ impl<T: Copy + PartialEq, U: Unsigned + NumCast + Copy + Debug> PixelMap<T, U> {
                 updates.push((sub_rect, value));
             });
         });
-        for (rect, color) in updates {
-            self.draw_rect(&rect, color);
+        for (rect, value) in updates {
+            self.draw_rect(&rect, value);
         }
     }
 

@@ -1,5 +1,6 @@
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
+use std::fmt;
 
 use super::line_interval::LineInterval;
 use super::line_iterator::{plot_line, LinePixelIterator};
@@ -17,7 +18,7 @@ where
 
 /// A line segment represented by two points, in integer coordinates.
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+#[derive(Clone, Copy, Default, PartialEq, Eq)]
 pub struct ILine {
     start: IVec2,
     end: IVec2,
@@ -336,6 +337,21 @@ impl ILine {
     #[must_use]
     pub fn pixels(&self) -> LinePixelIterator {
         LinePixelIterator::new(self)
+    }
+}
+
+impl fmt::Display for ILine {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "[{}, {}]", self.start, self.end)
+    }
+}
+
+impl fmt::Debug for ILine {
+    fn fmt(&self, fmt: &mut fmt::Formatter<'_>) -> fmt::Result {
+        fmt.debug_tuple(stringify!(ILine))
+            .field(&self.start)
+            .field(&self.end)
+            .finish()
     }
 }
 

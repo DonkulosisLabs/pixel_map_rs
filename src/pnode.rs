@@ -2,7 +2,7 @@
 use serde::{Deserialize, Serialize};
 
 use super::{ICircle, RayCast, RayCastContext, RayCastQuery, RayCastResult, Region};
-use crate::{distance_to_ipoint, exclusive_urect, NodePath, PNodeFill, Quadrant};
+use crate::{distance_to_ipoint, exclusive_urect, to_cropped_urect, NodePath, PNodeFill, Quadrant};
 use bevy_math::{URect, UVec2};
 use num_traits::{NumCast, Unsigned};
 use std::fmt::Debug;
@@ -523,14 +523,14 @@ impl<T: Copy + PartialEq, U: Unsigned + NumCast + Copy + Debug> PNode<T, U> {
     }
 
     pub(super) fn draw_circle(&mut self, circle: &ICircle, pixel_size: u8, value: T) {
-        let outer_rect = circle.aabb();
-        let inner_rect = circle.inner_rect();
+        let outer_rect = to_cropped_urect(&circle.aabb());
+        let inner_rect = to_cropped_urect(&circle.inner_rect());
         if self.contained_by_rect(&inner_rect) {
             self.set_value(value);
         } else if !self.region().intersect(&outer_rect).is_empty() {
             self.draw_rect(&inner_rect, pixel_size, value);
             let inner_rect = exclusive_urect(&inner_rect);
-            for p in circle.cropped_pixels() {
+            for p in circle.unsigned_pixels() {
                 if inner_rect.contains(p) {
                     continue;
                 }

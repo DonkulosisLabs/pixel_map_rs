@@ -2,6 +2,7 @@ use bevy_math::{uvec2, URect, UVec2};
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
 
+/// Iterate all pixel coordinates in a [URect].
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub struct URectPixelIterator {
     rect: URect,
