@@ -2,7 +2,7 @@
 
 ## Unreleased
 
-* Add support for drawing rotated rectangles
+* Add support for drawing rotated rectangles.
 
 ## v0.3.0
 
