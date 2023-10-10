@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+* Add support for drawing rotated rectangles.
+
 ## v0.3.0
 
 * `PixelMap::collect_points` supports non-default hasher with point `HashSet`.

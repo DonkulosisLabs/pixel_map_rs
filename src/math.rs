@@ -1,5 +1,5 @@
 use crate::{iline, ILine};
-use bevy_math::{ivec2, uvec2, IRect, IVec2, URect, UVec2};
+use bevy_math::{ivec2, uvec2, vec2, IRect, IVec2, Rect, URect, UVec2, Vec2};
 
 /// Find the distance squared between two points.
 #[inline]
@@ -27,6 +27,30 @@ pub fn distance_squared_to_ipoint(a: IVec2, b: IVec2) -> f32 {
 #[must_use]
 pub fn distance_to_ipoint(a: IVec2, b: IVec2) -> f32 {
     distance_squared_to_ipoint(a, b).sqrt()
+}
+
+/// Get the four points that make up the corners of the given `rect`.
+#[inline]
+#[must_use]
+pub fn rect_points(rect: &Rect) -> [Vec2; 4] {
+    [
+        rect.min,
+        rect.min + vec2(rect.width(), 0.),
+        rect.max,
+        rect.min + vec2(0., rect.height()),
+    ]
+}
+
+/// Get the four points that make up the corners of the given `rect`.
+#[inline]
+#[must_use]
+pub fn irect_points(rect: &IRect) -> [IVec2; 4] {
+    [
+        rect.min,
+        rect.min + ivec2(rect.width(), 0),
+        rect.max,
+        rect.min + ivec2(0, rect.height()),
+    ]
 }
 
 /// Get the four points that make up the corners of the given `rect`.
