@@ -242,37 +242,12 @@ mod tests {
     fn test_pixels() {
         let rect = IRect::new(0, 0, 4, 4);
         let rotated_rect = RotatedIRect::new(rect, 0.);
-        let pixels: Vec<IVec2> = rotated_rect.pixels().collect();
+        let mut pixels = rotated_rect.pixels();
 
-        assert_eq!(
-            pixels,
-            vec![
-                ivec2(0, 0),
-                ivec2(1, 0),
-                ivec2(2, 0),
-                ivec2(3, 0),
-                ivec2(4, 0),
-                ivec2(0, 1),
-                ivec2(1, 1),
-                ivec2(2, 1),
-                ivec2(3, 1),
-                ivec2(4, 1),
-                ivec2(0, 2),
-                ivec2(1, 2),
-                ivec2(2, 2),
-                ivec2(3, 2),
-                ivec2(4, 2),
-                ivec2(0, 3),
-                ivec2(1, 3),
-                ivec2(2, 3),
-                ivec2(3, 3),
-                ivec2(4, 3),
-                ivec2(0, 4),
-                ivec2(1, 4),
-                ivec2(2, 4),
-                ivec2(3, 4),
-                ivec2(4, 4)
-            ]
-        );
+        for y in 0..=4 {
+            for x in 0..=4 {
+                assert_eq!(pixels.next().unwrap(), ivec2(x, y));
+            }
+        }
     }
 }
