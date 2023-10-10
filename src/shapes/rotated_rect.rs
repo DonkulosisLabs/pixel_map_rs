@@ -1,5 +1,6 @@
 use crate::{iline, rect_points, ILine, LineStripPixelIterator, UnsignedPixelIterator};
 use bevy_math::{ivec2, vec2, IRect, IVec2, Vec2};
+use std::cmp::Ordering;
 
 /// A rectangle that is rotated around the center pivot point.
 #[derive(Debug)]
@@ -170,10 +171,14 @@ impl RotatedIRect {
                 row_points += 1;
             } else {
                 // Start new row
-                if row_points == 1 {
-                    rows.push(iline(ivec2(min_x, cur_y), ivec2(min_x, cur_y)));
-                } else if row_points > 1 {
-                    rows.push(iline(ivec2(min_x, cur_y), ivec2(max_x, cur_y)));
+                match row_points.cmp(&1) {
+                    Ordering::Equal => {
+                        rows.push(iline(ivec2(min_x, cur_y), ivec2(min_x, cur_y)));
+                    }
+                    Ordering::Greater => {
+                        rows.push(iline(ivec2(min_x, cur_y), ivec2(max_x, cur_y)));
+                    }
+                    Ordering::Less => {}
                 }
                 cur_y = p.y;
                 min_x = p.x;
@@ -182,10 +187,14 @@ impl RotatedIRect {
         }
 
         // Complete final row
-        if row_points == 1 {
-            rows.push(iline(ivec2(min_x, cur_y), ivec2(min_x, cur_y)));
-        } else if row_points > 1 {
-            rows.push(iline(ivec2(min_x, cur_y), ivec2(max_x, cur_y)));
+        match row_points.cmp(&1) {
+            Ordering::Equal => {
+                rows.push(iline(ivec2(min_x, cur_y), ivec2(min_x, cur_y)));
+            }
+            Ordering::Greater => {
+                rows.push(iline(ivec2(min_x, cur_y), ivec2(max_x, cur_y)));
+            }
+            Ordering::Less => {}
         }
 
         LineStripPixelIterator::from_lines(&rows)
