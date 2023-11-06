@@ -128,7 +128,7 @@ impl From<URect> for ICircle {
 impl From<&URect> for ICircle {
     #[inline]
     fn from(rect: &URect) -> Self {
-        Self::from(rect.as_urect() /* BUG! Rename to as_irect() */)
+        Self::from(rect.as_irect())
     }
 }
 

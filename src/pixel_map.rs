@@ -245,7 +245,7 @@ impl<T: Copy + PartialEq, U: Unsigned + NumCast + Copy + Debug> PixelMap<T, U> {
         if rrect.rotation.is_zero() {
             return self.draw_rect(&to_cropped_urect(&rrect.rect), value);
         }
-        let rect = rrect.aabb().intersect(self.map_rect().as_urect() /* fak */);
+        let rect = rrect.aabb().intersect(self.map_rect().as_irect());
         if rect.is_empty() {
             return false;
         }
@@ -783,9 +783,8 @@ impl<T: Copy + PartialEq, U: Unsigned + NumCast + Copy + Debug> PixelMap<T, U> {
                                 ivec2(left.max.x as i32, left.min.y as i32),
                                 left.max.as_ivec2(),
                             );
-                            let left_right_edge = left_right_edge.axis_aligned_intersect_rect(
-                                &left_rect.as_urect(), /* BUG! Rename to as_irect() */
-                            );
+                            let left_right_edge =
+                                left_right_edge.axis_aligned_intersect_rect(&left_rect.as_irect());
 
                             // left edge of the right node
                             let right = right.region().as_urect();
@@ -793,9 +792,8 @@ impl<T: Copy + PartialEq, U: Unsigned + NumCast + Copy + Debug> PixelMap<T, U> {
                                 right.min.as_ivec2(),
                                 ivec2(right.min.x as i32, right.max.y as i32),
                             );
-                            let right_left_edge = right_left_edge.axis_aligned_intersect_rect(
-                                &right_rect.as_urect(), /* BUG! Rename to as_irect() */
-                            );
+                            let right_left_edge =
+                                right_left_edge.axis_aligned_intersect_rect(&right_rect.as_irect());
 
                             if let (Some(left_right_edge), Some(right_left_edge)) =
                                 (left_right_edge, right_left_edge)
@@ -816,9 +814,8 @@ impl<T: Copy + PartialEq, U: Unsigned + NumCast + Copy + Debug> PixelMap<T, U> {
                                 ivec2(bottom.min.x as i32, bottom.max.y as i32),
                                 bottom.max.as_ivec2(),
                             );
-                            let bottom_top_edge = bottom_top_edge.axis_aligned_intersect_rect(
-                                &bottom_rect.as_urect(), /* BUG! Rename to as_irect() */
-                            );
+                            let bottom_top_edge = bottom_top_edge
+                                .axis_aligned_intersect_rect(&bottom_rect.as_irect());
 
                             // bottom edge of the top node
                             let top = top.region().as_urect();
@@ -826,9 +823,8 @@ impl<T: Copy + PartialEq, U: Unsigned + NumCast + Copy + Debug> PixelMap<T, U> {
                                 top.min.as_ivec2(),
                                 ivec2(top.max.x as i32, top.min.y as i32),
                             );
-                            let top_bottom_edge = top_bottom_edge.axis_aligned_intersect_rect(
-                                &top_rect.as_urect(), /* BUG! Rename to as_irect() */
-                            );
+                            let top_bottom_edge =
+                                top_bottom_edge.axis_aligned_intersect_rect(&top_rect.as_irect());
 
                             if let (Some(bottom_top_edge), Some(top_bottom_edge)) =
                                 (bottom_top_edge, top_bottom_edge)
