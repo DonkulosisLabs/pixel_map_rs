@@ -1,11 +1,11 @@
-#[cfg(feature = "serde")]
+#[cfg(feature = "serialize")]
 use serde::{Deserialize, Serialize};
 
 use crate::UnsignedPixelIterator;
 use bevy_math::{ivec2, IRect, IVec2, URect};
 
 /// A circle represented by a center point, in integer coordinates, and a radius.
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[cfg_attr(feature = "serialize", derive(Serialize, Deserialize))]
 #[derive(Debug, Clone, Default, Eq, PartialEq)]
 pub struct ICircle {
     point: IVec2,
@@ -132,7 +132,7 @@ impl From<&URect> for ICircle {
     }
 }
 
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[cfg_attr(feature = "serialize", derive(Serialize, Deserialize))]
 pub struct ICirclePixelIterator {
     circle: ICircle,
     x: i32,

@@ -12,16 +12,16 @@ keywords = ["pixel", "map", "image", "quadtree", "data-structure"]
 categories = ["data-structures", "multimedia::images"]
 
 [dependencies]
-bevy_math = "^0.12.0"
-num-traits = "^0.2.17"
-serde = { version = "^1.0.190", features = ["derive"], optional = true, default-features = false }
+bevy_math = "^0.14.0"
+num-traits = "^0.2.19"
+serde = { version = "^1.0.204", features = ["derive"], optional = true, default-features = false }
 
 [dev-dependencies]
 criterion = "^0.5.1"
 ron = "^0.8.1"
 
 [features]
-serialize = [ "dep:serde", "bevy_math/serialize" ]
+serialize = ["dep:serde", "bevy_math/serialize"]
 
 [[bench]]
 name = "set_pixel"

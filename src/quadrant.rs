@@ -1,4 +1,4 @@
-#[cfg(feature = "serde")]
+#[cfg(feature = "serialize")]
 use serde::{Deserialize, Serialize};
 use std::fmt::Debug;
 
@@ -6,7 +6,7 @@ use crate::Direction;
 use bevy_math::{IVec2, UVec2};
 
 /// A quadrant in a box.
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[cfg_attr(feature = "serialize", derive(Serialize, Deserialize))]
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[repr(usize)]
 pub enum Quadrant {

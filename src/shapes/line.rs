@@ -1,4 +1,4 @@
-#[cfg(feature = "serde")]
+#[cfg(feature = "serialize")]
 use serde::{Deserialize, Serialize};
 use std::fmt;
 
@@ -17,7 +17,7 @@ where
 }
 
 /// A line segment represented by two points, in integer coordinates.
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[cfg_attr(feature = "serialize", derive(Serialize, Deserialize))]
 #[derive(Clone, Copy, Default, PartialEq, Eq)]
 pub struct ILine {
     start: IVec2,

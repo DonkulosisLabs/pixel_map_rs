@@ -1,4 +1,4 @@
-#[cfg(feature = "serde")]
+#[cfg(feature = "serialize")]
 use serde::{Deserialize, Serialize};
 
 use super::quadrant::Quadrant;
@@ -6,7 +6,7 @@ use bevy_math::{IRect, IVec2, URect, UVec2};
 use num_traits::{NumCast, Unsigned};
 
 /// A square region defined by a bottom-left point and a size, in integer units.
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[cfg_attr(feature = "serialize", derive(Serialize, Deserialize))]
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct Region<U: Unsigned + Copy = u16> {
     x: U,

@@ -1,4 +1,4 @@
-#[cfg(feature = "serde")]
+#[cfg(feature = "serialize")]
 use serde::{Deserialize, Serialize};
 
 use super::{ICircle, PNode, RayCast, RayCastContext, RayCastQuery, RayCastResult, Region};
@@ -20,7 +20,7 @@ use std::hash::BuildHasher;
 /// - `T`: The type of pixel data. By default a `bool`, to denote the pixel is on or off.
 ///   A more useful type could be a `Color`.
 /// - `U`: The unsigned integer type of the coordinates used to index the pixels, typically `u16` (default), or `u32`.
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[cfg_attr(feature = "serialize", derive(Serialize, Deserialize))]
 #[derive(Clone, PartialEq)]
 pub struct PixelMap<T: Copy + PartialEq = bool, U: Unsigned + NumCast + Copy + Debug = u16> {
     root: PNode<T, U>,
@@ -853,7 +853,7 @@ impl<T: Copy + PartialEq, U: Unsigned + NumCast + Copy + Debug> Debug for PixelM
 
 /// Stores statistics about a [PixelMap].
 /// See [PixelMap::stats].
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[cfg_attr(feature = "serialize", derive(Serialize, Deserialize))]
 #[derive(Debug, Default, Eq, PartialEq)]
 pub struct Stats {
     /// The number of nodes in the quadtree.
@@ -1059,7 +1059,7 @@ mod test {
     }
 
     #[test]
-    #[cfg(feature = "serde")]
+    #[cfg(feature = "serialize")]
     fn test_serialization() {
         let mut pm: PixelMap<bool, u32> = PixelMap::new(&UVec2::splat(2), false, 1);
         pm.set_pixel((0, 0), true);

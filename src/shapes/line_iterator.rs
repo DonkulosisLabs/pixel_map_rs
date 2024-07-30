@@ -1,4 +1,4 @@
-#[cfg(feature = "serde")]
+#[cfg(feature = "serialize")]
 use serde::{Deserialize, Serialize};
 
 use super::ILine;
@@ -43,7 +43,7 @@ where
     plot(x1, y1);
 }
 
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[cfg_attr(feature = "serialize", derive(Serialize, Deserialize))]
 #[derive(Debug, Clone, PartialEq)]
 pub enum LinePixelIterator {
     Axis(AxisLineIterator),
@@ -94,7 +94,7 @@ impl Iterator for LinePixelIterator {
     }
 }
 
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[cfg_attr(feature = "serialize", derive(Serialize, Deserialize))]
 #[derive(Debug, Clone, PartialEq)]
 pub struct AxisLineIterator {
     point: IVec2,
@@ -173,7 +173,7 @@ impl Iterator for AxisLineIterator {
     }
 }
 
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[cfg_attr(feature = "serialize", derive(Serialize, Deserialize))]
 #[derive(Debug, Clone, PartialEq)]
 pub struct AngleLineIterator {
     end: IVec2,

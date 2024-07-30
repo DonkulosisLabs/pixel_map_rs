@@ -1,4 +1,4 @@
-#[cfg(feature = "serde")]
+#[cfg(feature = "serialize")]
 use serde::{Deserialize, Serialize};
 
 use super::{ICircle, RayCast, RayCastContext, RayCastQuery, RayCastResult, Region};
@@ -9,7 +9,7 @@ use std::fmt::Debug;
 
 pub type Children<T, U> = Box<[PNode<T, U>; 4]>;
 
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[cfg_attr(feature = "serialize", derive(Serialize, Deserialize))]
 #[derive(Clone, Debug, PartialEq)]
 enum PNodeKind<T: Copy + PartialEq = bool, U: Unsigned + NumCast + Copy + Debug = u16> {
     Leaf(T),
@@ -49,7 +49,7 @@ impl<T: Copy + PartialEq, U: Unsigned + NumCast + Copy + Debug> PNodeKind<T, U> 
 }
 
 /// A node of a [crate::PixelMap] quadtree.
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[cfg_attr(feature = "serialize", derive(Serialize, Deserialize))]
 #[derive(Clone, Debug, PartialEq)]
 pub struct PNode<T: Copy + PartialEq = bool, U: Unsigned + NumCast + Copy + Debug = u16> {
     region: Region<U>,
