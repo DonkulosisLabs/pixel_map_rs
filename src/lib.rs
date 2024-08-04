@@ -9,6 +9,7 @@
 //! pixels having the same value (as per the function of a quadtree).
 
 mod direction;
+mod isocontour;
 mod math;
 mod node_path;
 mod pixel_map;
@@ -19,6 +20,6 @@ mod region;
 mod shapes;
 
 pub use self::{
-    direction::*, math::*, node_path::*, pixel_map::*, pnode::*, quadrant::*, ray_cast::*,
-    region::*, shapes::*,
+    direction::*, isocontour::*, math::*, node_path::*, pixel_map::*, pnode::*, quadrant::*,
+    ray_cast::*, region::*, shapes::*,
 };

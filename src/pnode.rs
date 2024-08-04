@@ -2,7 +2,7 @@
 use serde::{Deserialize, Serialize};
 
 use super::{ICircle, RayCast, RayCastContext, RayCastQuery, RayCastResult, Region};
-use crate::{distance_to_ipoint, exclusive_urect, to_cropped_urect, NodePath, PNodeFill, Quadrant};
+use crate::{distance_to_ipoint, exclusive_urect, to_cropped_urect, CellFill, NodePath, Quadrant};
 use bevy_math::{URect, UVec2};
 use num_traits::{NumCast, Unsigned};
 use std::fmt::Debug;
@@ -141,24 +141,24 @@ impl<T: Copy + PartialEq, U: Unsigned + NumCast + Copy + Debug> PNode<T, U> {
     ///
     /// # Leaf Nodes
     ///
-    /// A leaf node will be considered [PNodeFill::Full] if the predicate
-    /// returns `true` for that node, otherwise [PNodeFill::Empty].
+    /// A leaf node will be considered [CellFill::Full] if the predicate
+    /// returns `true` for that node, otherwise [CellFill::Empty].
     ///
     /// # Branch Nodes
     ///
-    /// A branch node will produce a [PNodeFill] that reflects the quadrant(s) that are leaf nodes
+    /// A branch node will produce a [CellFill] that reflects the quadrant(s) that are leaf nodes
     /// and pass the predicate. In other words, any quadrants that are not represented by
-    /// the returned [PNodeFill] are either a complex sub-tree of nodes, or do not pass the
+    /// the returned [CellFill] are either a complex sub-tree of nodes, or do not pass the
     /// predicate.
-    pub fn node_fill_profile<F>(&self, mut predicate: F) -> PNodeFill
+    pub fn node_fill_profile<F>(&self, mut predicate: F) -> CellFill
     where
         F: FnMut(&PNode<T, U>) -> bool,
     {
         if self.is_leaf() {
             if predicate(self) {
-                PNodeFill::Full
+                CellFill::Full
             } else {
-                PNodeFill::Empty
+                CellFill::Empty
             }
         } else {
             let children = self.children();
@@ -176,53 +176,53 @@ impl<T: Copy + PartialEq, U: Unsigned + NumCast + Copy + Debug> PNode<T, U> {
             );
 
             match (bl, br, tl, tr) {
-                (true, true, true, true) => PNodeFill::Full,
-                (false, false, false, false) => PNodeFill::Empty,
-                (true, false, false, false) => PNodeFill::BottomLeft,
-                (false, true, false, false) => PNodeFill::BottomRight,
-                (false, false, true, false) => PNodeFill::TopLeft,
-                (false, false, false, true) => PNodeFill::TopRight,
-                (true, true, false, false) => PNodeFill::Bottom,
-                (false, false, true, true) => PNodeFill::Top,
-                (true, false, true, false) => PNodeFill::Left,
-                (false, true, false, true) => PNodeFill::Right,
-                (true, false, false, true) => PNodeFill::BottomLeftTopRight,
-                (false, true, true, false) => PNodeFill::BottomRightTopLeft,
-                (false, true, true, true) => PNodeFill::NotBottomLeft,
-                (true, false, true, true) => PNodeFill::NotBottomRight,
-                (true, true, false, true) => PNodeFill::NotTopLeft,
-                (true, true, true, false) => PNodeFill::NotTopRight,
+                (true, true, true, true) => CellFill::Full,
+                (false, false, false, false) => CellFill::Empty,
+                (true, false, false, false) => CellFill::BottomLeft,
+                (false, true, false, false) => CellFill::BottomRight,
+                (false, false, true, false) => CellFill::TopLeft,
+                (false, false, false, true) => CellFill::TopRight,
+                (true, true, false, false) => CellFill::Bottom,
+                (false, false, true, true) => CellFill::Top,
+                (true, false, true, false) => CellFill::Left,
+                (false, true, false, true) => CellFill::Right,
+                (true, false, false, true) => CellFill::BottomLeftTopRight,
+                (false, true, true, false) => CellFill::BottomRightTopLeft,
+                (false, true, true, true) => CellFill::NotBottomLeft,
+                (true, false, true, true) => CellFill::NotBottomRight,
+                (true, true, false, true) => CellFill::NotTopLeft,
+                (true, true, true, false) => CellFill::NotTopRight,
             }
         }
     }
 
     /// If a rectangle can contour the given `fill` pattern without gaps, return that rectangle
     /// representation for this node's region. Otherwise, return `None`.
-    pub fn node_fill_rect(&self, fill: PNodeFill) -> Option<URect> {
+    pub fn node_fill_rect(&self, fill: CellFill) -> Option<URect> {
         if let Some(q) = fill.quadrant() {
             return Some(self.children()[q as usize].region().into());
         }
         match fill {
-            PNodeFill::Full => Some(self.region().into()),
-            PNodeFill::Bottom => {
+            CellFill::Full => Some(self.region().into()),
+            CellFill::Bottom => {
                 let children = self.children();
                 let bottom_left = children[Quadrant::BottomLeft as usize].region().as_urect();
                 let bottom_right = children[Quadrant::BottomRight as usize].region().as_urect();
                 Some(URect::from_corners(bottom_left.min, bottom_right.max))
             }
-            PNodeFill::Top => {
+            CellFill::Top => {
                 let children = self.children();
                 let top_left = children[Quadrant::TopLeft as usize].region().as_urect();
                 let top_right = children[Quadrant::TopRight as usize].region().as_urect();
                 Some(URect::from_corners(top_left.min, top_right.max))
             }
-            PNodeFill::Left => {
+            CellFill::Left => {
                 let children = self.children();
                 let bottom_left = children[Quadrant::BottomLeft as usize].region().as_urect();
                 let top_left = children[Quadrant::TopLeft as usize].region().as_urect();
                 Some(URect::from_corners(bottom_left.min, top_left.max))
             }
-            PNodeFill::Right => {
+            CellFill::Right => {
                 let children = self.children();
                 let bottom_right = children[Quadrant::BottomRight as usize].region().as_urect();
                 let top_right = children[Quadrant::TopRight as usize].region().as_urect();
@@ -235,7 +235,7 @@ impl<T: Copy + PartialEq, U: Unsigned + NumCast + Copy + Debug> PNode<T, U> {
     // Visit all nodes within the given rectangle boundary.
     pub(super) fn visit_nodes_in_rect<F>(&self, rect: &URect, visitor: &mut F, traversed: &mut u32)
     where
-        F: FnMut(&PNode<T, U>, &URect) -> PNodeFill,
+        F: FnMut(&PNode<T, U>, &URect) -> CellFill,
     {
         *traversed += 1;
 
@@ -958,7 +958,7 @@ mod test {
             &n.region().into(),
             &mut |_n, _r| {
                 count += 1;
-                PNodeFill::Full
+                CellFill::Full
             },
             &mut 0,
         );

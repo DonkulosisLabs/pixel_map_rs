@@ -18,7 +18,7 @@ where
 
 /// A line segment represented by two points, in integer coordinates.
 #[cfg_attr(feature = "serialize", derive(Serialize, Deserialize))]
-#[derive(Clone, Copy, Default, PartialEq, Eq)]
+#[derive(Clone, Copy, Default, PartialEq, Eq, Hash)]
 pub struct ILine {
     start: IVec2,
     end: IVec2,

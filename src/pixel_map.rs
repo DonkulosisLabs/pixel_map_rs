@@ -1,10 +1,13 @@
 #[cfg(feature = "serialize")]
 use serde::{Deserialize, Serialize};
 
-use super::{ICircle, PNode, RayCast, RayCastContext, RayCastQuery, RayCastResult, Region};
+use super::{
+    ICircle, ILine, IsoLine, PNode, RayCast, RayCastContext, RayCastQuery, RayCastResult, Region,
+};
+use crate::isocontour::FragmentAccumulator;
 use crate::{
-    exclusive_urect, iline, to_cropped_urect, urect_points, ILine, NeighborOrientation, NodePath,
-    PNodeFill, RotatedIRect,
+    exclusive_urect, iline, to_cropped_urect, urect_points, CellFill, NeighborOrientation,
+    NodePath, RotatedIRect,
 };
 use bevy_math::{ivec2, IVec2, URect, UVec2};
 use num_traits::{NumCast, Unsigned, Zero};
@@ -17,7 +20,7 @@ use std::hash::BuildHasher;
 ///
 /// # Type Parameters
 ///
-/// - `T`: The type of pixel data. By default a `bool`, to denote the pixel is on or off.
+/// - `T`: The type of pixel data. By default, a `bool`, to denote the pixel is on or off.
 ///   A more useful type could be a `Color`.
 /// - `U`: The unsigned integer type of the coordinates used to index the pixels, typically `u16` (default), or `u32`.
 #[cfg_attr(feature = "serialize", derive(Serialize, Deserialize))]
@@ -339,7 +342,7 @@ impl<T: Copy + PartialEq, U: Unsigned + NumCast + Copy + Debug> PixelMap<T, U> {
     /// - `rect`: The rectangle in which contained or overlapping nodes will be visited.
     /// - `visitor`: A closure that takes a reference to a node, and a reference to a
     ///   rectangle as parameters. This rectangle represents the intersection of the node's
-    ///   region and the `rect` parameter supplied to this method. It returns a [PNodeFill]
+    ///   region and the `rect` parameter supplied to this method. It returns a [CellFill]
     ///   that denotes which child nodes should be visited.
     ///
     /// # Returns
@@ -348,7 +351,7 @@ impl<T: Copy + PartialEq, U: Unsigned + NumCast + Copy + Debug> PixelMap<T, U> {
     #[inline]
     pub fn visit_nodes_in_rect<F>(&self, rect: &URect, mut visitor: F) -> u32
     where
-        F: FnMut(&PNode<T, U>, &URect) -> PNodeFill,
+        F: FnMut(&PNode<T, U>, &URect) -> CellFill,
     {
         let rect = rect.intersect(self.map_rect());
         if rect.is_empty() {
@@ -639,7 +642,7 @@ impl<T: Copy + PartialEq, U: Unsigned + NumCast + Copy + Debug> PixelMap<T, U> {
                         stats.unit_count += 1;
                     }
                 }
-                PNodeFill::Full
+                CellFill::Full
             },
             &mut 0,
         );
@@ -758,9 +761,10 @@ impl<T: Copy + PartialEq, U: Unsigned + NumCast + Copy + Debug> PixelMap<T, U> {
     /// # Returns
     ///
     /// A list of line segments that contour the shapes determined by the given
-    /// `predicate` closure. Returned line segments are non-contiguous; this is *not* a polyline.
+    /// `predicate` closure. The number of segments returned are the minimum possible,
+    /// in that one segment does not share continuity with any other segment.
     #[must_use]
-    pub fn contour<F>(&self, rect: &URect, mut predicate: F) -> Vec<ILine>
+    pub fn contour<F>(&self, rect: &URect, mut predicate: F) -> Vec<IsoLine>
     where
         F: FnMut(&PNode<T, U>, &URect) -> bool,
     {
@@ -769,10 +773,21 @@ impl<T: Copy + PartialEq, U: Unsigned + NumCast + Copy + Debug> PixelMap<T, U> {
             return vec![];
         }
 
-        let mut edges: Vec<ILine> = Vec::with_capacity(1024);
+        let mut fragments = FragmentAccumulator::new(256);
+        self.contour_segments(&sub_rect, &mut predicate, |seg| {
+            fragments.attach(*seg);
+        });
 
+        fragments.result()
+    }
+
+    fn contour_segments<F, G>(&self, rect: &URect, mut predicate: F, mut seg_handler: G)
+    where
+        F: FnMut(&PNode<T, U>, &URect) -> bool,
+        G: FnMut(&ILine),
+    {
         self.root
-            .visit_neighbor_pairs_face(&sub_rect, &mut |or, a, a_rect, b, b_rect| {
+            .visit_neighbor_pairs_face(rect, &mut |or, a, a_rect, b, b_rect| {
                 match or {
                     NeighborOrientation::Horizontal => {
                         let (left, left_rect, right, right_rect) = (a, a_rect, b, b_rect);
@@ -800,7 +815,7 @@ impl<T: Copy + PartialEq, U: Unsigned + NumCast + Copy + Debug> PixelMap<T, U> {
                             {
                                 if let Some(common_edge) = left_right_edge.overlap(&right_left_edge)
                                 {
-                                    edges.push(common_edge);
+                                    seg_handler(&common_edge);
                                 }
                             }
                         }
@@ -831,15 +846,13 @@ impl<T: Copy + PartialEq, U: Unsigned + NumCast + Copy + Debug> PixelMap<T, U> {
                             {
                                 if let Some(common_edge) = bottom_top_edge.overlap(&top_bottom_edge)
                                 {
-                                    edges.push(common_edge);
+                                    seg_handler(&common_edge);
                                 }
                             }
                         }
                     }
                 }
             });
-
-        edges
     }
 }
 
@@ -889,7 +902,8 @@ fn next_pow2(mut n: u32) -> u32 {
 mod test {
     use crate::pixel_map::next_pow2;
     use crate::*;
-    use bevy_math::{URect, UVec2};
+    use bevy_math::{IVec2, URect, UVec2};
+    use std::collections::HashSet;
 
     #[test]
     fn test_u_type_parameters() {
@@ -1083,5 +1097,23 @@ mod test {
         assert_eq!(next_pow2(17u32), 32);
         assert_eq!(next_pow2(32u32), 32);
         assert_eq!(next_pow2(33u32), 64);
+    }
+
+    #[test]
+    fn test_contour_segments_unique() {
+        let mut pm: PixelMap<bool, u32> = PixelMap::new(&UVec2::splat(1024), false, 1);
+        pm.draw_circle(&ICircle::new(IVec2::splat(512), 50), true);
+
+        let mut segments: HashSet<ILine> = HashSet::with_capacity(256);
+        pm.contour_segments(
+            &pm.region().as_urect(),
+            |a, _| *a.value(),
+            |seg| {
+                assert!(segments.insert(*seg));
+                assert!(segments.insert(seg.flip()));
+            },
+        );
+
+        assert_eq!(segments.len(), 728);
     }
 }

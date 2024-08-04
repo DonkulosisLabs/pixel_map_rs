@@ -125,7 +125,7 @@ impl Quadrant {
 /// A [PixelMap] quadtree node fill pattern, regarding child node storage.
 #[derive(Debug, Copy, Clone, PartialEq)]
 #[repr(u8)]
-pub enum PNodeFill {
+pub enum CellFill {
     /// ```text
     /// oo
     /// oo
@@ -228,20 +228,20 @@ pub enum PNodeFill {
         Quadrant::BottomLeft.as_bit() | Quadrant::TopLeft.as_bit() | Quadrant::TopRight.as_bit(),
 }
 
-impl PNodeFill {
+impl CellFill {
     /// Negate the node fill pattern.
     #[inline]
-    pub fn invert(&self) -> PNodeFill {
+    pub fn invert(&self) -> CellFill {
         unsafe { std::mem::transmute(!(*self as u8) & 0b1111) }
     }
 
     /// If the fill represents a single quadrant, return that quadrant. `None`, otherwise.
     pub fn quadrant(&self) -> Option<Quadrant> {
         match self {
-            PNodeFill::TopLeft => Some(Quadrant::TopLeft),
-            PNodeFill::TopRight => Some(Quadrant::TopRight),
-            PNodeFill::BottomLeft => Some(Quadrant::BottomLeft),
-            PNodeFill::BottomRight => Some(Quadrant::BottomRight),
+            CellFill::TopLeft => Some(Quadrant::TopLeft),
+            CellFill::TopRight => Some(Quadrant::TopRight),
+            CellFill::BottomLeft => Some(Quadrant::BottomLeft),
+            CellFill::BottomRight => Some(Quadrant::BottomRight),
             _ => None,
         }
     }
@@ -250,7 +250,7 @@ impl PNodeFill {
 #[cfg(test)]
 mod test {
     use super::Quadrant;
-    use crate::PNodeFill;
+    use crate::CellFill;
 
     #[test]
     fn test_for_upoint() {
@@ -270,11 +270,11 @@ mod test {
 
     #[test]
     fn test_node_fill_invert() {
-        assert_eq!(PNodeFill::Full.invert(), PNodeFill::Empty);
-        assert_eq!(PNodeFill::Empty.invert(), PNodeFill::Full);
-        assert_eq!(PNodeFill::Left.invert(), PNodeFill::Right);
-        assert_eq!(PNodeFill::Right.invert(), PNodeFill::Left);
-        assert_eq!(PNodeFill::TopLeft.invert(), PNodeFill::NotTopLeft);
-        assert_eq!(PNodeFill::NotTopLeft.invert(), PNodeFill::TopLeft);
+        assert_eq!(CellFill::Full.invert(), CellFill::Empty);
+        assert_eq!(CellFill::Empty.invert(), CellFill::Full);
+        assert_eq!(CellFill::Left.invert(), CellFill::Right);
+        assert_eq!(CellFill::Right.invert(), CellFill::Left);
+        assert_eq!(CellFill::TopLeft.invert(), CellFill::NotTopLeft);
+        assert_eq!(CellFill::NotTopLeft.invert(), CellFill::TopLeft);
     }
 }
