@@ -2,7 +2,7 @@
 use serde::{Deserialize, Serialize};
 
 use super::{ICircle, RayCast, RayCastContext, RayCastQuery, RayCastResult, Region};
-use crate::{distance_to_ipoint, exclusive_urect, to_cropped_urect, CellFill, NodePath, Quadrant};
+use crate::{exclusive_urect, to_cropped_urect, CellFill, NodePath, Quadrant};
 use bevy_math::{URect, UVec2};
 use num_traits::{NumCast, Unsigned};
 use std::fmt::Debug;
@@ -460,8 +460,11 @@ impl<T: Copy + PartialEq, U: Unsigned + NumCast + Copy + Debug> PNode<T, U> {
                                 continue;
                             }
                             RayCast::Hit => {
-                                let distance =
-                                    distance_to_ipoint(query.line.start(), current_point);
+                                let distance = query
+                                    .line
+                                    .start()
+                                    .as_vec2()
+                                    .distance(current_point.as_vec2());
                                 let result = RayCastResult {
                                     collision_point: Some(current_point.as_uvec2()),
                                     distance,

@@ -15,18 +15,27 @@ pub fn distance_to_upoint(a: UVec2, b: UVec2) -> f32 {
     distance_squared_to_upoint(a, b).sqrt()
 }
 
-/// Find the distance squared between two points.
 #[inline]
 #[must_use]
-pub fn distance_squared_to_ipoint(a: IVec2, b: IVec2) -> f32 {
-    a.as_vec2().distance_squared(b.as_vec2())
+pub fn distance_squared_to_line(p: Vec2, line: &[Vec2; 2]) -> f32 {
+    let v = line[0];
+    let w = line[1];
+
+    if v == w {
+        return p.distance_squared(v);
+    }
+
+    let l2 = v.distance_squared(w);
+
+    let t = ((p - v).dot(w - v) / l2).clamp(0., 1.);
+    let projection = v + t * (w - v);
+    p.distance_squared(projection)
 }
 
-/// Find the distance between two points.
 #[inline]
 #[must_use]
-pub fn distance_to_ipoint(a: IVec2, b: IVec2) -> f32 {
-    distance_squared_to_ipoint(a, b).sqrt()
+pub fn distance_to_line(p: Vec2, line: &[Vec2; 2]) -> f32 {
+    distance_squared_to_line(p, line).sqrt()
 }
 
 /// Get the four points that make up the corners of the given `rect`.

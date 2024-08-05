@@ -4,8 +4,8 @@ use std::fmt;
 
 use super::line_interval::LineInterval;
 use super::line_iterator::{plot_line, LinePixelIterator};
-use crate::{distance_squared_to_ipoint, distance_to_ipoint, irect_edges, Direction};
-use bevy_math::{ivec2, IRect, IVec2};
+use crate::{distance_squared_to_line, distance_to_line, irect_edges, Direction};
+use bevy_math::{ivec2, IRect, IVec2, Vec2};
 
 /// An alias for [ILine::new].
 #[inline]
@@ -61,14 +61,26 @@ impl ILine {
     #[inline]
     #[must_use]
     pub fn length_squared(&self) -> f32 {
-        distance_squared_to_ipoint(self.start, self.end)
+        self.start.as_vec2().distance_squared(self.end.as_vec2())
     }
 
     /// Get the line's length.
     #[inline]
     #[must_use]
     pub fn length(&self) -> f32 {
-        distance_to_ipoint(self.start, self.end)
+        self.start.as_vec2().distance(self.end.as_vec2())
+    }
+
+    #[inline]
+    #[must_use]
+    pub fn distance_squared_to_point(&self, p: Vec2) -> f32 {
+        distance_squared_to_line(p, &self.into())
+    }
+
+    #[inline]
+    #[must_use]
+    pub fn distance_to_point(&self, p: Vec2) -> f32 {
+        distance_to_line(p, &self.into())
     }
 
     /// Create a new line that is the rotation of this line around its start point, by the given radians.
@@ -113,11 +125,12 @@ impl ILine {
     #[must_use]
     pub fn contains<P>(&self, point: P) -> bool
     where
-        P: Into<IVec2>,
+        P: Into<Vec2>,
     {
         let point = point.into();
-        let d = distance_to_ipoint(self.start, point) + distance_to_ipoint(point, self.end)
-            - self.length();
+        let d_sp = self.start.as_vec2().distance(point);
+        let d_pe = point.distance(self.end.as_vec2());
+        let d = d_sp + d_pe - self.length();
         -f32::EPSILON < d && d < f32::EPSILON
     }
 
@@ -340,6 +353,30 @@ impl ILine {
     }
 }
 
+impl From<&ILine> for [Vec2; 2] {
+    fn from(value: &ILine) -> Self {
+        [value.start.as_vec2(), value.end.as_vec2()]
+    }
+}
+
+impl From<ILine> for [Vec2; 2] {
+    fn from(value: ILine) -> Self {
+        [value.start.as_vec2(), value.end.as_vec2()]
+    }
+}
+
+impl From<&ILine> for [IVec2; 2] {
+    fn from(value: &ILine) -> Self {
+        [value.start, value.end]
+    }
+}
+
+impl From<ILine> for [IVec2; 2] {
+    fn from(value: ILine) -> Self {
+        [value.start, value.end]
+    }
+}
+
 impl fmt::Display for ILine {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "[{}, {}]", self.start, self.end)
@@ -362,9 +399,9 @@ mod test {
     #[test]
     fn test_contains() {
         let line = iline((0, 0), (10, 10));
-        assert!(line.contains((5, 5)));
-        assert!(!line.contains((5, 6)));
-        assert!(!line.contains((6, 5)));
+        assert!(line.contains((5., 5.)));
+        assert!(!line.contains((5., 6.)));
+        assert!(!line.contains((6., 5.)));
     }
 
     #[test]
