@@ -14,7 +14,7 @@ categories = ["data-structures", "multimedia::images"]
 [dependencies]
 bevy_math = "^0.14.1"
 num-traits = "^0.2.19"
-serde = { version = "^1.0.204", features = ["derive"], optional = true, default-features = false }
+serde = { version = "^1.0.205", features = ["derive"], optional = true, default-features = false }
 
 [dev-dependencies]
 criterion = "^0.5.1"

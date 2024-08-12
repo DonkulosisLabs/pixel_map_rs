@@ -11,7 +11,7 @@ use crate::{
 };
 use bevy_math::{ivec2, IVec2, URect, UVec2};
 use num_traits::{NumCast, Unsigned, Zero};
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 use std::fmt::{Debug, Formatter};
 use std::hash::BuildHasher;
 
@@ -742,6 +742,76 @@ impl<T: Copy + PartialEq, U: Unsigned + NumCast + Copy + Debug> PixelMap<T, U> {
         if !sub_rect.is_empty() {
             self.root.visit_neighbor_pairs_face(&sub_rect, visitor);
         }
+    }
+
+    /// Generate a quad mesh that contains a triangulated quad for each leaf node accepted by
+    /// the predicate function. The returned quad mesh is non-uniform in that neighboring quads
+    /// having differing sizes, according to the layout of the quadtree, will not be fully
+    /// connected via triangulation.
+    ///
+    /// # Parameters
+    ///
+    /// - `rect`: The rectangle in which contained or overlapping nodes will be visited.
+    /// - `predicate`: A closure that takes a reference to a leaf node, and a reference to a rectangle as parameters.
+    ///   This rectangle represents the intersection of the node's region and the `rect` parameter supplied to this method.
+    ///   It returns `true` if the node matches the predicate, or `false` otherwise.
+    /// - `size_estimate`: An estimated (or known) capacity of each returned vec.
+    ///
+    /// # Returns
+    ///
+    /// A tuple having a vec of unique vertex points, and a vec of triangle indices. Each element
+    /// in the index vec is a slice of each index in a triangle, in counter-clockwise winding.
+    pub fn non_uniform_quad_mesh<F>(
+        &self,
+        rect: &URect,
+        mut predicate: F,
+        size_estimate: usize,
+    ) -> (Vec<UVec2>, Vec<[u32; 3]>)
+    where
+        F: FnMut(&PNode<T, U>, &URect) -> bool,
+    {
+        let sub_rect = self.map_rect.intersect(*rect);
+        if sub_rect.is_empty() {
+            return (vec![], vec![]);
+        }
+
+        let mut vertex_map: HashMap<[u32; 2], u32> = HashMap::with_capacity(size_estimate);
+        let mut indices = Vec::with_capacity(size_estimate);
+
+        #[inline]
+        fn create_or_add_vertex(vertex_map: &mut HashMap<[u32; 2], u32>, v: UVec2) -> u32 {
+            let next_index = vertex_map.len() as u32;
+            *vertex_map.entry(v.into()).or_insert(next_index)
+        }
+
+        self.root.visit_leaves_in_rect(
+            &sub_rect,
+            &mut |n, sub_rect| {
+                if !predicate(n, sub_rect) {
+                    return;
+                }
+
+                let c = urect_points(sub_rect);
+                let i = [
+                    create_or_add_vertex(&mut vertex_map, c[0]),
+                    create_or_add_vertex(&mut vertex_map, c[1]),
+                    create_or_add_vertex(&mut vertex_map, c[2]),
+                    create_or_add_vertex(&mut vertex_map, c[3]),
+                ];
+
+                indices.push([i[0], i[1], i[2]]);
+                indices.push([i[0], i[2], i[3]]);
+            },
+            &mut 0,
+        );
+
+        let mut vertices = Vec::with_capacity(vertex_map.len());
+        vertices.resize(vertex_map.len(), Default::default());
+        vertex_map.into_iter().for_each(|(k, v)| {
+            vertices[v as usize] = k.into();
+        });
+
+        (vertices, indices)
     }
 
     /// Obtain a list of line segments that contour the shapes determined by the given
