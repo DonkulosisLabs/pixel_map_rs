@@ -49,7 +49,22 @@ impl<T: Copy + PartialEq, U: Unsigned + NumCast + Copy + Debug> PixelMap<T, U> {
             .for_each(|d| self.visit_neighbors(rect, node, d, &mut predicate, &mut visitor));
     }
 
+    /// Visit neighboring nodes to the given node, on the specified edge or corner.  
     ///
+    /// # Parameters
+    ///
+    /// - `rect`: The rectangle in which contained or overlapping nodes will be visited.
+    /// - `node`: The node for which to visit neighbors.
+    /// - `direction`: The direction of the edge of the node for which to visit neighbors. When the
+    ///   given direction is one of the diagonal variants, the single respective corner node
+    ///   is visited.
+    /// - `predicate`: A closure that takes a reference to a leaf node, and a reference to a rectangle as parameters.
+    ///   This rectangle represents the intersection of the node's region and the `rect` parameter supplied to this method.
+    ///   It returns `true` if the node matches the predicate, or `false` otherwise.
+    /// - `visitor`: A closure that takes a reference to a leaf node, and a reference to a rectangle as parameters.
+    ///   The node reference is a neighbor of the `node` passed to this method, on the edge of the given `direction`,
+    ///   that has been accepted by the given `predicate` callback. This rectangle represents
+    ///   the intersection of the node's region and the `rect` parameter supplied to this method.
     pub fn visit_neighbors<F, V>(
         &self,
         rect: &URect,
