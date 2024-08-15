@@ -53,9 +53,9 @@ impl Direction {
         .copied()
     }
 
-    /// Iterate both cardinal and diagonal directions.
+    /// Iterate all directions.
     #[inline]
-    pub fn iter_cardinal_diagonal() -> impl Iterator<Item = Direction> {
+    pub fn iter() -> impl Iterator<Item = Direction> {
         [
             Direction::North,
             Direction::East,

@@ -26,9 +26,9 @@ use std::hash::BuildHasher;
 #[cfg_attr(feature = "serialize", derive(Serialize, Deserialize))]
 #[derive(Clone, PartialEq)]
 pub struct PixelMap<T: Copy + PartialEq = bool, U: Unsigned + NumCast + Copy + Debug = u16> {
-    root: PNode<T, U>,
-    map_rect: URect,
-    pixel_size: u8,
+    pub(crate) root: PNode<T, U>,
+    pub(crate) map_rect: URect,
+    pub(crate) pixel_size: u8,
 }
 
 impl<T: Copy + PartialEq, U: Unsigned + NumCast + Copy + Debug> PixelMap<T, U> {
@@ -136,6 +136,26 @@ impl<T: Copy + PartialEq, U: Unsigned + NumCast + Copy + Debug> PixelMap<T, U> {
         let point = point.into();
         if self.contains(point) {
             Some(self.root.find_node(point).value())
+        } else {
+            None
+        }
+    }
+
+    /// Get the node that represents the pixel at the given coordinates. If the coordinates
+    /// are outside the region covered by this [PixelMap], None is returned.
+    ///
+    /// # Parameters
+    ///
+    /// - `point`: The coordinates of the pixel for which to retrieve the representing node.
+    #[inline]
+    #[must_use]
+    pub fn find_node<P>(&self, point: P) -> Option<&PNode<T, U>>
+    where
+        P: Into<UVec2>,
+    {
+        let point = point.into();
+        if self.contains(point) {
+            Some(self.root.find_node(point))
         } else {
             None
         }
@@ -391,7 +411,7 @@ impl<T: Copy + PartialEq, U: Unsigned + NumCast + Copy + Debug> PixelMap<T, U> {
         self.root.any_leaves_in_rect(&rect, &mut f)
     }
 
-    /// Determine if all of the leaf nodes within the bounds of the given rectangle match the predicate.
+    /// Determine if all the leaf nodes within the bounds of the given rectangle match the predicate.
     /// Node visitation short-circuits upon the first match.
     ///
     /// # Parameters
@@ -717,30 +737,6 @@ impl<T: Copy + PartialEq, U: Unsigned + NumCast + Copy + Debug> PixelMap<T, U> {
         });
         for (rect, value) in updates {
             self.draw_rect(&rect, value);
-        }
-    }
-
-    /// Visit all leaf nodes that intersect with the given `rect` that are neighbors.
-    /// The `visitor` closure is called once for each unique pair of neighbor nodes.
-    ///
-    /// # Parameters
-    ///
-    /// - `rect`: The rectangle in which contained or overlapping nodes will be visited.
-    /// - `visitor`: A closure that takes:
-    ///   - A [NeighborOrientation] that indicates the orientation of the neighboring nodes.
-    ///   - The left or bottom node, depending on the orientation.
-    ///   - The rectangle that is the effective intersection of the left or bottom node's region
-    ///     and the `rect` parameter supplied to this method.
-    ///   - The right or top node, depending on the orientation.
-    ///   - The rectangle that is the effective intersection of the right or top node's region
-    ///     and the `rect` parameter supplied to this method.
-    pub fn visit_neighbor_pairs<F>(&self, rect: &URect, visitor: &mut F)
-    where
-        F: FnMut(NeighborOrientation, &PNode<T, U>, &URect, &PNode<T, U>, &URect),
-    {
-        let sub_rect = self.map_rect.intersect(*rect);
-        if !sub_rect.is_empty() {
-            self.root.visit_neighbor_pairs_face(&sub_rect, visitor);
         }
     }
 

@@ -53,6 +53,14 @@ impl<U: Unsigned + NumCast + Copy> Region<U> {
         self.point() + size
     }
 
+    /// Get the center point.
+    #[inline]
+    #[must_use]
+    pub fn center(&self) -> UVec2 {
+        let size: u32 = self.size_as();
+        self.point() + (size / 2)
+    }
+
     /// Get the size of the region.
     #[inline]
     #[must_use]
@@ -66,10 +74,10 @@ impl<U: Unsigned + NumCast + Copy> Region<U> {
         num_traits::cast::cast::<U, N>(self.size).unwrap()
     }
 
-    /// Get the center point of the region.
+    /// Get the region size / 2.
     #[inline]
     #[must_use]
-    pub fn center(&self) -> U {
+    pub fn half_size(&self) -> U {
         self.size / U::from(2).unwrap()
     }
 
@@ -134,7 +142,7 @@ impl<U: Unsigned + NumCast + Copy> Region<U> {
         P: Into<UVec2>,
     {
         let point = point.into();
-        let center = num_traits::cast(self.center()).unwrap();
+        let center = num_traits::cast(self.half_size()).unwrap();
         Quadrant::for_upoint(point - self.point(), center)
     }
 
@@ -146,7 +154,7 @@ impl<U: Unsigned + NumCast + Copy> Region<U> {
         P: Into<IVec2>,
     {
         let point = point.into();
-        let center = num_traits::cast(self.center()).unwrap();
+        let center = num_traits::cast(self.half_size()).unwrap();
         Quadrant::for_ipoint(point - self.point().as_ivec2(), center)
     }
 

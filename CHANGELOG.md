@@ -9,6 +9,8 @@
 * Add [Ramer-Douglas-Peucker](https://en.wikipedia.org/wiki/Ramer%E2%80%93Douglas%E2%80%93Peucker_algorithm) line
   simplification algorithm as `IsoLine::simplify`.
 * Add `ILine::distance_to_point` and `ILine::distance_squared_to_point` functions.
+* Add `PixelMap::non_uniform_quad_mesh` function.
+* Add a series of neighbour navigation functions surrounding: `PixelMap::visit_neighbor`.
 
 ## v0.3.0
 

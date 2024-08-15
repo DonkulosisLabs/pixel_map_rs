@@ -726,7 +726,7 @@ impl<T: Copy + PartialEq, U: Unsigned + NumCast + Copy + Debug> PNode<T, U> {
 
         let x = self.region.x();
         let y = self.region.y();
-        let half_size = self.region.center();
+        let half_size = self.region.half_size();
 
         let value = *self.value();
         self.kind = PNodeKind::Branch(Box::new([

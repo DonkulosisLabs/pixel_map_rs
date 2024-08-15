@@ -11,6 +11,7 @@
 mod direction;
 mod isocontour;
 mod math;
+mod nearest_neighbor;
 mod node_path;
 mod pixel_map;
 mod pnode;
