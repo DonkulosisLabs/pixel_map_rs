@@ -1,4 +1,4 @@
-use crate::{Direction, NeighborOrientation, PNode, PixelMap, Region};
+use crate::{Direction, NeighborOrientation, PNode, PixelMap};
 use bevy_math::{URect, UVec2};
 use num_traits::{NumCast, Unsigned};
 use std::fmt::Debug;
