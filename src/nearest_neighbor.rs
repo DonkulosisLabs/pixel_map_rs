@@ -1,4 +1,4 @@
-use crate::{Direction, NeighborOrientation, PNode, PixelMap};
+use crate::{Direction, NeighborOrientation, PNode, PixelMap, Region};
 use bevy_math::{URect, UVec2};
 use num_traits::{NumCast, Unsigned};
 use std::fmt::Debug;
@@ -8,7 +8,7 @@ impl<T: Copy + PartialEq, U: Unsigned + NumCast + Copy + Debug> PixelMap<T, U> {
     pub fn visit_all_neighbors<F, V>(
         &self,
         rect: &URect,
-        node: &PNode<T, U>,
+        node_region: &URect,
         mut predicate: F,
         mut visitor: V,
     ) where
@@ -16,14 +16,14 @@ impl<T: Copy + PartialEq, U: Unsigned + NumCast + Copy + Debug> PixelMap<T, U> {
         V: FnMut(&PNode<T, U>, &URect),
     {
         Direction::iter()
-            .for_each(|d| self.visit_neighbors(rect, node, d, &mut predicate, &mut visitor));
+            .for_each(|d| self.visit_neighbors(rect, node_region, d, &mut predicate, &mut visitor));
     }
 
     #[inline]
     pub fn visit_diagonal_neighbors<F, V>(
         &self,
         rect: &URect,
-        node: &PNode<T, U>,
+        node_region: &URect,
         mut predicate: F,
         mut visitor: V,
     ) where
@@ -31,14 +31,14 @@ impl<T: Copy + PartialEq, U: Unsigned + NumCast + Copy + Debug> PixelMap<T, U> {
         V: FnMut(&PNode<T, U>, &URect),
     {
         Direction::iter_diagonal()
-            .for_each(|d| self.visit_neighbors(rect, node, d, &mut predicate, &mut visitor));
+            .for_each(|d| self.visit_neighbors(rect, node_region, d, &mut predicate, &mut visitor));
     }
 
     #[inline]
     pub fn visit_cardinal_neighbors<F, V>(
         &self,
         rect: &URect,
-        node: &PNode<T, U>,
+        node_region: &URect,
         mut predicate: F,
         mut visitor: V,
     ) where
@@ -46,7 +46,7 @@ impl<T: Copy + PartialEq, U: Unsigned + NumCast + Copy + Debug> PixelMap<T, U> {
         V: FnMut(&PNode<T, U>, &URect),
     {
         Direction::iter_cardinal()
-            .for_each(|d| self.visit_neighbors(rect, node, d, &mut predicate, &mut visitor));
+            .for_each(|d| self.visit_neighbors(rect, node_region, d, &mut predicate, &mut visitor));
     }
 
     /// Visit neighboring nodes to the given node, on the specified edge or corner.  
@@ -54,7 +54,7 @@ impl<T: Copy + PartialEq, U: Unsigned + NumCast + Copy + Debug> PixelMap<T, U> {
     /// # Parameters
     ///
     /// - `rect`: The rectangle in which contained or overlapping nodes will be visited.
-    /// - `node`: The node for which to visit neighbors.
+    /// - `node_region`: The region represented by the node for which to visit neighbors.
     /// - `direction`: The direction of the edge of the node for which to visit neighbors. When the
     ///   given direction is one of the diagonal variants, the single respective corner node
     ///   is visited.
@@ -68,7 +68,7 @@ impl<T: Copy + PartialEq, U: Unsigned + NumCast + Copy + Debug> PixelMap<T, U> {
     pub fn visit_neighbors<F, V>(
         &self,
         rect: &URect,
-        node: &PNode<T, U>,
+        node_region: &URect,
         direction: Direction,
         mut predicate: F,
         mut visitor: V,
@@ -76,9 +76,7 @@ impl<T: Copy + PartialEq, U: Unsigned + NumCast + Copy + Debug> PixelMap<T, U> {
         F: FnMut(&PNode<T, U>, &URect) -> bool,
         V: FnMut(&PNode<T, U>, &URect),
     {
-        assert!(node.is_leaf());
-
-        let rect = rect.intersect(node.region().as_urect());
+        let rect = rect.intersect(*node_region);
 
         let neighbor_rect = match rect_outer_edge(&rect, direction) {
             Some(r) => r,
@@ -192,7 +190,7 @@ mod test {
         let pm = PixelMap::<bool, u32>::new(&UVec2::splat(2), false, 1);
         pm.visit_all_neighbors(
             &pm.region().as_urect(),
-            &pm.root,
+            &pm.root.region().as_urect(),
             |n, _| *n.value(),
             |n, _| {
                 assert!(false);
@@ -201,7 +199,7 @@ mod test {
 
         pm.visit_all_neighbors(
             &pm.region().as_urect(),
-            &pm.root,
+            &pm.root.region().as_urect(),
             |n, _| !*n.value(),
             |n, _| {
                 assert!(false);
@@ -217,7 +215,7 @@ mod test {
         let n = pm.root.find_node(uvec2(1, 1));
         pm.visit_all_neighbors(
             &pm.region().as_urect(),
-            n,
+            &n.region().as_urect(),
             |n, _| *n.value() != 0,
             |n, _| {
                 assert!(false);
@@ -238,7 +236,7 @@ mod test {
         pm.set_pixel(uvec2(0, 1), 80); // West
         pm.set_pixel(uvec2(0, 2), 90); // NorthWest
 
-        let center = pm.root.find_node(uvec2(1, 1));
+        let center = &pm.root.find_node(uvec2(1, 1)).region().as_urect();
 
         // North
         let mut visited = 0u32;
