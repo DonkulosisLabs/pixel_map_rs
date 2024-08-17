@@ -90,6 +90,24 @@ pixel_map.clear_dirty(true /*recurse*/);
   are provided. So, this is achievable in encompassing or accompanying code, according to the needs
   of your use case.
 
+## Testing
+
+Run `cargo test` to unit test.
+
+Mind blown, hey?
+
+### Benchmarking
+
+Run `cargo benchmark` to run all [Criterion](https://github.com/bheisler/criterion.rs) benchmarks.
+Or, `cargo benchmark --bench <name>` to run a particular benchmark.
+
+Benchmarks are integrated with [pprof](https://github.com/tikv/pprof-rs) to produce
+[flamegraphs](https://github.com/flamegraph-rs/flamegraph), upon activation.
+
+Run `cargo benchmark --bench <name> -- --profile-time=5` to sample the benchmark run,
+and generate a flamegraph, which can be found in
+`./target/criterion/<name>/<group>/profile/flamegraph.svg`.
+
 ## License
 
 `pixel_map` is free and open source. All code in this repository is dual-licensed under

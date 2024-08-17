@@ -192,7 +192,7 @@ mod test {
             &pm.region().as_urect(),
             &pm.root.region().as_urect(),
             |n, _| *n.value(),
-            |n, _| {
+            |_n, _| {
                 assert!(false);
             },
         );
@@ -201,7 +201,7 @@ mod test {
             &pm.region().as_urect(),
             &pm.root.region().as_urect(),
             |n, _| !*n.value(),
-            |n, _| {
+            |_n, _| {
                 assert!(false);
             },
         );
@@ -217,7 +217,7 @@ mod test {
             &pm.region().as_urect(),
             &n.region().as_urect(),
             |n, _| *n.value() != 0,
-            |n, _| {
+            |_n, _| {
                 assert!(false);
             },
         );
