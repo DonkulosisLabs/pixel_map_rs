@@ -35,3 +35,6 @@ harness = false
 name = "visit"
 harness = false
 
+[[bench]]
+name = "visit_neighbors"
+harness = false
