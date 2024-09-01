@@ -10,10 +10,11 @@ use crate::{
     NodePath, RotatedIRect,
 };
 use bevy_math::{ivec2, IVec2, URect, UVec2};
+use fxhash::{FxBuildHasher, FxHasher};
 use num_traits::{NumCast, Unsigned, Zero};
 use std::collections::{HashMap, HashSet};
 use std::fmt::{Debug, Formatter};
-use std::hash::BuildHasher;
+use std::hash::{BuildHasher, BuildHasherDefault};
 
 /// A two-dimensional map of pixels implemented by an MX quadtree.
 /// The coordinate origin is at the bottom left.
@@ -771,11 +772,15 @@ impl<T: Copy + PartialEq, U: Unsigned + NumCast + Copy + Debug> PixelMap<T, U> {
             return (vec![], vec![]);
         }
 
-        let mut vertex_map: HashMap<[u32; 2], u32> = HashMap::with_capacity(size_estimate);
+        let mut vertex_map: HashMap<[u32; 2], u32, _> =
+            HashMap::with_capacity_and_hasher(size_estimate, FxBuildHasher::default());
         let mut indices = Vec::with_capacity(size_estimate);
 
         #[inline]
-        fn create_or_add_vertex(vertex_map: &mut HashMap<[u32; 2], u32>, v: UVec2) -> u32 {
+        fn create_or_add_vertex(
+            vertex_map: &mut HashMap<[u32; 2], u32, BuildHasherDefault<FxHasher>>,
+            v: UVec2,
+        ) -> u32 {
             let next_index = vertex_map.len() as u32;
             *vertex_map.entry(v.into()).or_insert(next_index)
         }

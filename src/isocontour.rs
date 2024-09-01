@@ -1,7 +1,9 @@
 use crate::{distance_to_line, ILine};
 use bevy_math::IVec2;
+use fxhash::{FxBuildHasher, FxHasher};
 use num_traits::Zero;
 use std::collections::HashMap;
+use std::hash::BuildHasherDefault;
 
 type FragmentKey = usize;
 
@@ -9,9 +11,9 @@ type Fragment = Vec<IVec2>;
 
 pub(super) struct FragmentAccumulator {
     next_key: FragmentKey,
-    fragments: HashMap<FragmentKey, Fragment>,
-    by_start: HashMap<IVec2, FragmentKey>,
-    by_end: HashMap<IVec2, FragmentKey>,
+    fragments: HashMap<FragmentKey, Fragment, BuildHasherDefault<FxHasher>>,
+    by_start: HashMap<IVec2, FragmentKey, BuildHasherDefault<FxHasher>>,
+    by_end: HashMap<IVec2, FragmentKey, BuildHasherDefault<FxHasher>>,
 }
 
 impl FragmentAccumulator {
@@ -19,9 +21,9 @@ impl FragmentAccumulator {
     pub(super) fn new(size: usize) -> Self {
         Self {
             next_key: 0,
-            fragments: HashMap::with_capacity(size),
-            by_start: HashMap::with_capacity(size),
-            by_end: HashMap::with_capacity(size),
+            fragments: HashMap::with_capacity_and_hasher(size, FxBuildHasher::default()),
+            by_start: HashMap::with_capacity_and_hasher(size, FxBuildHasher::default()),
+            by_end: HashMap::with_capacity_and_hasher(size, FxBuildHasher::default()),
         }
     }
 

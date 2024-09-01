@@ -13,6 +13,7 @@ categories = ["data-structures", "multimedia::images"]
 
 [dependencies]
 bevy_math = "^0.14.1"
+fxhash = "^0.2.1"
 num-traits = "^0.2.19"
 serde = { version = "^1.0.205", features = ["derive"], optional = true, default-features = false }
 
