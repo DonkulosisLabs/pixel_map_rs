@@ -34,43 +34,53 @@ use pixel_map::PixelMap;
 // Example pixel data
 struct Color(u8, u8, u8);
 
-let mut pixel_map = PixelMap::<Color>::new(
-& uvec2(1920, 1080), // size of the pixel map
-Color(0, 0, 0),     // initial value
-1,                  // pixel size
-);
-
+fn main() {
+    let mut pixel_map = PixelMap::<Color>::new(
+        &uvec2(1920, 1080), // size of the pixel map
+        Color(0, 0, 0),     // initial value
+        1,                  // pixel size
+    );
+}
 ```
 
 ### Drawing on the PixelMap
 
 ```rust
-// Set a pixel
-pixel_map.set_pixel((11, 12), Color(255, 0, 0));
 
-// Draw a line
-pixel_map.draw_line( & ULine::new((500, 500), (600, 400)), Color(0, 255, 0));
+fn main() {
+    let pixel_map = ...;
 
-// Draw a rectangle
-pixel_map.draw_rect( & URect::from_corners(uvec2(200, 200), uvec2(300, 300)), Color(0, 0, 255));
+    // Set a pixel
+    pixel_map.set_pixel((11, 12), Color(255, 0, 0));
 
-// Draw a circle
-pixel_map.draw_circle( & ICircle::new((500, 500), 100), Color(0, 0, 255));
+    // Draw a line
+    pixel_map.draw_line(&ULine::new((500, 500), (600, 400)), Color(0, 255, 0));
+
+    // Draw a rectangle
+    pixel_map.draw_rect(&URect::from_corners(uvec2(200, 200), uvec2(300, 300)), Color(0, 0, 255));
+
+    // Draw a circle
+    pixel_map.draw_circle(&ICircle::new((500, 500), 100), Color(0, 0, 255));
+}
 ```
 
 ### Navigating the PixelMap
 
 ```rust
-// Visit all leaf nodes
-pixel_map.visit( | node| {
-println ! ("region: {:?}, value: {:?}", node.region(), node.value());
-});
+fn main() {
+    let pixel_map = ...;
 
-// Visit all leaf nodes that have been modified
-pixel_map.visit_dirty( | node| {
-println ! ("region: {:?}, value: {:?}", node.region(), node.value());
-});
-pixel_map.clear_dirty(true /*recurse*/);
+    // Visit all leaf nodes
+    pixel_map.visit(|node| {
+        println!("region: {:?}, value: {:?}", node.region(), node.value());
+    });
+
+    // Visit all leaf nodes that have been modified
+    pixel_map.visit_dirty(|node| {
+        println!("region: {:?}, value: {:?}", node.region(), node.value());
+    });
+    pixel_map.clear_dirty(true /*recurse*/);
+}
 ```
 
 ## Features
@@ -80,7 +90,7 @@ pixel_map.clear_dirty(true /*recurse*/);
     * Rectangles
     * Circles
 * Perform boolean operations against two pixel maps (i.e. union, intersection, difference, xor).
-* Detect changes to tree nodes via a dirty flag.
+* Detect changes to tree nodes via a "dirty" flag.
 * Calculate contiguous contouring lines around shapes.
 
 ## Limitations
