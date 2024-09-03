@@ -11,6 +11,7 @@
 * Add `ILine::distance_to_point` and `ILine::distance_squared_to_point` functions.
 * Add `PixelMap::non_uniform_quad_mesh` function.
 * Add a series of neighbour navigation functions surrounding: `PixelMap::visit_neighbor`.
+* Add A* grid pathfinding via `PixelMap::pathfind_a_star_grid`.
 
 ## v0.3.0
 

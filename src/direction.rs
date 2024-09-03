@@ -27,47 +27,42 @@ pub enum Direction {
 }
 
 impl Direction {
+    pub const CARDINAL: [Direction; 4] = [Self::North, Self::East, Self::South, Self::West];
+
+    pub const DIAGONAL: [Direction; 4] = [
+        Self::NorthEast,
+        Self::SouthEast,
+        Self::SouthWest,
+        Self::NorthWest,
+    ];
+
+    pub const ALL: [Direction; 8] = [
+        Self::North,
+        Self::NorthEast,
+        Self::East,
+        Self::SouthEast,
+        Self::South,
+        Self::SouthWest,
+        Self::West,
+        Self::NorthWest,
+    ];
+
     /// Iterate N, E, S, W directions.
     #[inline]
     pub fn iter_cardinal() -> impl Iterator<Item = Direction> {
-        [
-            Direction::North,
-            Direction::East,
-            Direction::South,
-            Direction::West,
-        ]
-        .iter()
-        .copied()
+        Self::CARDINAL.iter().copied()
     }
 
     /// Iterate NE, NW, SE, SW directions.
     #[inline]
     pub fn iter_diagonal() -> impl Iterator<Item = Direction> {
-        [
-            Direction::NorthEast,
-            Direction::NorthWest,
-            Direction::SouthEast,
-            Direction::SouthWest,
-        ]
-        .iter()
-        .copied()
+        Self::DIAGONAL.iter().copied()
     }
 
     /// Iterate all directions.
     #[inline]
     pub fn iter() -> impl Iterator<Item = Direction> {
-        [
-            Direction::North,
-            Direction::East,
-            Direction::South,
-            Direction::West,
-            Direction::NorthEast,
-            Direction::NorthWest,
-            Direction::SouthEast,
-            Direction::SouthWest,
-        ]
-        .iter()
-        .copied()
+        Self::ALL.iter().copied()
     }
 
     /// Returns the unit vector for this direction.

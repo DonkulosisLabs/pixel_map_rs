@@ -14,6 +14,7 @@ categories = ["data-structures", "multimedia::images"]
 [dependencies]
 bevy_math = "^0.14.1"
 fxhash = "^0.2.1"
+indexmap = "2.5.0"
 num-traits = "^0.2.19"
 serde = { version = "^1.0.205", features = ["derive"], optional = true, default-features = false }
 
@@ -21,16 +22,21 @@ serde = { version = "^1.0.205", features = ["derive"], optional = true, default-
 criterion = "^0.5.1"
 pprof = { version = "^0.13.0", features = ["criterion", "flamegraph"] }
 ron = "^0.8.1"
+image = "0.25.2"
 
 [features]
 serialize = ["dep:serde", "bevy_math/serialize"]
 
 [[bench]]
-name = "set_pixel"
+name = "get_pixel"
 harness = false
 
 [[bench]]
-name = "get_pixel"
+name = "pathfinding"
+harness = false
+
+[[bench]]
+name = "set_pixel"
 harness = false
 
 [[bench]]

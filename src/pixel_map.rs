@@ -564,12 +564,18 @@ impl<T: Copy + PartialEq, U: Unsigned + NumCast + Copy + Debug> PixelMap<T, U> {
     /// - `predicate`: A closure that takes a reference to a leaf node, and a reference to a rectangle as parameters.
     ///   This rectangle represents the intersection of the node's region and the `rect` parameter supplied to this method.
     ///   It returns `true` if the node matches the predicate, or `false` otherwise.
-    pub fn points<F>(&self, rect: &URect, offset: IVec2, predicate: F) -> HashSet<IVec2>
+    pub fn points<F>(
+        &self,
+        rect: &URect,
+        offset: IVec2,
+        predicate: F,
+    ) -> HashSet<IVec2, BuildHasherDefault<FxHasher>>
     where
         F: FnMut(&PNode<T, U>, &URect) -> bool,
     {
         let area = rect.width() * rect.height();
-        let mut result = HashSet::with_capacity(area as usize / 4);
+        let mut result =
+            HashSet::with_capacity_and_hasher(area as usize / 4, FxBuildHasher::default());
         self.collect_points(rect, offset, predicate, &mut result);
         result
     }

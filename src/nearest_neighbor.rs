@@ -1,5 +1,5 @@
 use crate::{Direction, NeighborOrientation, PNode, PixelMap};
-use bevy_math::{URect, UVec2};
+use bevy_math::{uvec2, URect};
 use num_traits::{NumCast, Unsigned};
 use std::fmt::Debug;
 
@@ -78,12 +78,10 @@ impl<T: Copy + PartialEq, U: Unsigned + NumCast + Copy + Debug> PixelMap<T, U> {
     {
         let rect = rect.intersect(*node_region);
 
-        let neighbor_rect = match rect_outer_edge(&rect, direction) {
-            Some(r) => r,
-            None => {
-                return;
-            }
-        };
+        let neighbor_rect = rect_outer_edge(&rect, direction);
+        if neighbor_rect.is_empty() {
+            return;
+        }
 
         self.root.visit_leaves_in_rect(
             &neighbor_rect,
@@ -121,63 +119,56 @@ impl<T: Copy + PartialEq, U: Unsigned + NumCast + Copy + Debug> PixelMap<T, U> {
     }
 }
 
+/// Obtain a rect that encompasses the outer edge of the given `rect`, for the
+/// desired `direction`. The returned edge rect is 1 pixel "thick".
+/// The returned rect for diagonal edges (corners) is 1x1 pixel in size.
 #[inline]
-fn rect_outer_edge(rect: &URect, direction: Direction) -> Option<URect> {
-    let edge = match direction {
+#[must_use]
+pub fn rect_outer_edge(rect: &URect, direction: Direction) -> URect {
+    match direction {
         Direction::North => URect::from_corners(
-            UVec2::new(rect.min.x, rect.max.y),
-            UVec2::new(rect.max.x, rect.max.y + 1),
+            uvec2(rect.min.x, rect.max.y),
+            uvec2(rect.max.x, rect.max.y + 1),
         ),
         Direction::NorthEast => URect::from_corners(rect.max, rect.max + 1),
         Direction::East => URect::from_corners(
-            UVec2::new(rect.max.x, rect.min.y),
-            UVec2::new(rect.max.x + 1, rect.max.y),
+            uvec2(rect.max.x, rect.min.y),
+            uvec2(rect.max.x + 1, rect.max.y),
         ),
-        Direction::SouthEast => {
-            if rect.min.y == 0 {
-                return None;
-            }
-            URect::from_corners(
-                UVec2::new(rect.max.x, rect.min.y - 1),
-                UVec2::new(rect.max.x + 1, rect.min.y),
-            )
-        }
-        Direction::South => {
-            if rect.min.y == 0 {
-                return None;
-            }
-            URect::from_corners(
-                UVec2::new(rect.min.x, rect.min.y - 1),
-                UVec2::new(rect.max.x, rect.min.y),
-            )
-        }
-        Direction::SouthWest => {
-            if rect.min.x == 0 || rect.min.y == 0 {
-                return None;
-            }
-            URect::from_corners(UVec2::new(rect.min.x - 1, rect.min.y - 1), rect.min)
-        }
-        Direction::West => {
-            if rect.min.x == 0 {
-                return None;
-            }
-            URect::from_corners(
-                UVec2::new(rect.min.x - 1, rect.min.y),
-                UVec2::new(rect.min.x, rect.max.y),
-            )
-        }
-        Direction::NorthWest => {
-            if rect.min.x == 0 {
-                return None;
-            }
-            URect::from_corners(
-                UVec2::new(rect.min.x - 1, rect.max.y),
-                UVec2::new(rect.min.x, rect.max.y + 1),
-            )
-        }
-    };
+        Direction::SouthEast => URect::from_corners(
+            uvec2(rect.max.x, rect.min.y.saturating_sub(1)),
+            uvec2(rect.max.x + 1, rect.min.y),
+        ),
+        Direction::South => URect::from_corners(
+            uvec2(rect.min.x, rect.min.y.saturating_sub(1)),
+            uvec2(rect.max.x, rect.min.y),
+        ),
+        Direction::SouthWest => URect::from_corners(
+            uvec2(rect.min.x.saturating_sub(1), rect.min.y.saturating_sub(1)),
+            rect.min,
+        ),
+        Direction::West => URect::from_corners(
+            uvec2(rect.min.x.saturating_sub(1), rect.min.y),
+            uvec2(rect.min.x, rect.max.y),
+        ),
+        Direction::NorthWest => URect::from_corners(
+            uvec2(rect.min.x.saturating_sub(1), rect.max.y),
+            uvec2(rect.min.x, rect.max.y + 1),
+        ),
+    }
+}
 
-    Some(edge)
+/// Obtain the rectangle of the neighboring cell of the given `cell`
+/// in the desired `direction`.
+#[inline]
+#[must_use]
+pub fn cell_neighbor(cell: &URect, direction: Direction) -> URect {
+    let cell_size = cell.width();
+    assert_eq!(cell_size, cell.height());
+    URect::from_corners(
+        direction.move_upoint(cell.min, cell_size),
+        direction.move_upoint(cell.max, cell_size),
+    )
 }
 
 #[cfg(test)]

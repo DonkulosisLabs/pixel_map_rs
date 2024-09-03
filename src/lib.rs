@@ -13,6 +13,7 @@ mod isocontour;
 mod math;
 mod nearest_neighbor;
 mod node_path;
+pub mod pathfinding;
 mod pixel_map;
 mod pnode;
 mod quadrant;
@@ -24,3 +25,5 @@ pub use self::{
     direction::*, isocontour::*, math::*, node_path::*, pixel_map::*, pnode::*, quadrant::*,
     ray_cast::*, region::*, shapes::*,
 };
+
+pub use bevy_math;
