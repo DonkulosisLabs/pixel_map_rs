@@ -11,7 +11,7 @@ use pixel_map::{pathfinding, PixelMap};
 
 fn criterion_benchmark(c: &mut Criterion) {
     let mut group = c.benchmark_group("pathfinding");
-    group.sample_size(100);
+    group.sample_size(50);
 
     let white: Rgba<u8> = Rgba::from([255, 255, 255, 255]);
 

@@ -108,8 +108,8 @@ Mind blown, hey?
 
 ### Benchmarking
 
-Run `cargo benchmark` to run all [Criterion](https://github.com/bheisler/criterion.rs) benchmarks.
-Or, `cargo benchmark --bench <name>` to run a particular benchmark.
+Run `cargo bench` to run all [Criterion](https://github.com/bheisler/criterion.rs) benchmarks.
+Or, `cargo bench --bench <name>` to run a particular benchmark.
 
 Benchmarks are integrated with [pprof](https://github.com/tikv/pprof-rs) to produce
 [flamegraphs](https://github.com/flamegraph-rs/flamegraph), upon activation.

@@ -88,9 +88,16 @@ impl<T: Copy + PartialEq, U: Unsigned + NumCast + Copy + Debug> PixelMap<T, U> {
                 if cell.contains(goal) {
                     let path = reverse_path(parents, index);
 
+                    // Map path points to cell centres
                     let mut path: Vec<UVec2> =
                         path.iter().map(|min| *min + grid_half_size).collect();
-                    path.push(goal);
+
+                    // Replace first point (cell centre) with start
+                    *path.get_mut(0).unwrap() = start;
+
+                    // Replace last point (cell centre) with goal
+                    let len = path.len();
+                    *path.get_mut(len - 1).unwrap() = goal;
 
                     return Some((path, cost, considered_nodes));
                 }
