@@ -13,26 +13,86 @@ use std::hash::BuildHasherDefault;
 // Adapted from: https://github.com/evenfurther/pathfinding/blob/main/src/directed/astar.rs
 // Released under a dual Apache 2.0 / MIT free software license.
 
+/// Results from [PixelMap::pathfind_a_star_grid].
+#[derive(Debug, Clone)]
+pub struct PathfindAStarGridResult {
+    /// A path of points from the desired `start` points to a `goal` point.
+    /// Never empty.
+    pub path: Vec<UVec2>,
+
+    /// The cost value of the path.
+    pub cost: u32,
+
+    /// The number of cells examined to find the shortest path.
+    pub considered_cells: u32,
+}
+
 type FxIndexMap<K, V> = IndexMap<K, V, BuildHasherDefault<FxHasher>>;
 
 impl<T: Copy + PartialEq, U: Unsigned + NumCast + Copy + Debug> PixelMap<T, U> {
+    /// Find the shortest path from the `start` point to the `goal` point, using the
+    /// A* algorithm to traverse a grid of cells over this quadtree. The grid, for which square
+    /// cell size is defined by `cell_size`, is aligned with the `(0,0)` point
+    /// (bottom-left of the quadtree) regardless of the given `bounds`. A path is determined by
+    /// examining cells, and a cell is considered navigable when all nodes that compose the cell
+    /// pass the given `predicate`. Apart from the `start` and `goal` points, resulting path
+    /// points are positioned at the center of navigable cells.
+    ///
+    /// # Parameters
+    ///
+    /// - `bounds`: The rectangle in which contained or overlapping cells will be considered.
+    /// - `cell_size`: The size of an edge, in pixels, of a single square cell in the grid to
+    ///   navigate. A lower value will produce better path precision, but will take longer
+    ///   to compute being that there will be more potential paths to consider. This value also
+    ///   contributes to the effective spacing from walls that a resulting path will take. For
+    ///   example, a `cell_size` of 50 would produce a path that is roughly 25 pixels away from
+    ///   walls, minimum. Also consider that a gap between walls must be at least this
+    ///   size in order to path through it. And, being that the grid is fixed to the zero point
+    ///   a gap that is actually wider than the `cell_size` may still deny a path if the gap
+    ///   straddles a border between two cells, where the `predicate` rejects both of those cells
+    ///   due to overlap with either wall. So, generally, at least 2x the `cell_size` is
+    ///   what can safely be considered the minimum allowable gap between walls that a path
+    ///   can take.
+    /// - `start`: The origin point of the potential path.
+    /// - `goal`: The destination point of the potential path.
+    /// - `heuristic`: The `A*` algorithm heuristic function. A general-purpose
+    ///   [euclidean_heuristic] is provided. But, a heuristic tuned specifically for your use case
+    ///   can produce significant performance improvements.
+    /// - `predicate`: A closure that takes a reference to a leaf node, and a reference to a
+    ///    rectangle as parameters. This rectangle represents the intersection of the node's
+    ///    region and the `bounds` parameter supplied to this method. It returns `true` if the
+    ///    node matches the predicate, or `false` otherwise. The `predicate` function is consulted
+    ///    for every node the composes a cell (with short-circuit), and cell is considered to be
+    ///    navigable only if all nodes produce a `true` result.
+    ///
+    /// # Returns
+    ///
+    /// `None is returned under the following conditions:
+    ///
+    /// - The `bounds` does not intersect with this quadtree's [PixelMap::map_rect].
+    /// - The `start` or `goal` points do not fall within the intersection of the `bounds`
+    ///   rectangle and this quadtree's [PixelMap::map_rect].
+    /// - The nodes representing the `start` or `goal` points do not pass the `predicate`.
+    /// - A navigable path is not possible.
+    ///
+    /// Otherwise, `Some` of a [PathfindAStarGridResult] is returned.
     pub fn pathfind_a_star_grid<H, F>(
         &self,
         bounds: &URect,
-        grid_size: u32,
+        cell_size: u32,
         start: UVec2,
         goal: UVec2,
         heuristic: H,
         mut predicate: F,
-    ) -> Option<(Vec<UVec2>, u32, u32)>
+    ) -> Option<PathfindAStarGridResult>
     where
         H: Fn(&UVec2, &UVec2) -> u32,
         F: FnMut(&PNode<T, U>, &URect) -> bool,
     {
-        if grid_size < 1 {
+        if cell_size < 1 {
             panic!("grid_size must be >= 1");
         }
-        let grid_half_size = grid_size / 2;
+        let grid_half_size = cell_size / 2;
 
         let bounds = bounds.intersect(self.map_rect());
         if bounds.is_empty() {
@@ -40,6 +100,11 @@ impl<T: Copy + PartialEq, U: Unsigned + NumCast + Copy + Debug> PixelMap<T, U> {
         }
 
         let start_node = self.root.find_node(start);
+
+        // Special case: start or goal point is out of bounds
+        if !bounds.contains(start) || !bounds.contains(goal) {
+            return None;
+        }
 
         // Special case: start node does not match predicate
         {
@@ -61,7 +126,11 @@ impl<T: Copy + PartialEq, U: Unsigned + NumCast + Copy + Debug> PixelMap<T, U> {
         // Special case: start and goal are within one node -> draw straight line
         if start_node.region().contains_upoint(goal) {
             let path = vec![start, goal];
-            return Some((path, 0, 1));
+            return Some(PathfindAStarGridResult {
+                path,
+                cost: 0,
+                considered_cells: 1,
+            });
         }
 
         let mut to_see = BinaryHeap::with_capacity(512);
@@ -72,17 +141,17 @@ impl<T: Copy + PartialEq, U: Unsigned + NumCast + Copy + Debug> PixelMap<T, U> {
         });
 
         let mut parents: FxIndexMap<UVec2, (u32, u32)> = FxIndexMap::default();
-        let start_cell = cell_for_point(start, grid_size);
+        let start_cell = cell_for_point(start, cell_size);
         parents.insert(start_cell.min, (u32::MAX, 0));
 
-        let mut considered_nodes = 1;
+        let mut considered_cells = 1;
         let mut direction_toggle = false;
         let mut last_successful_direction: Direction = Direction::North;
 
         while let Some(SmallestCostHolder { cost, index, .. }) = to_see.pop() {
             let cell = {
                 let (cell_min, &(_, c)) = parents.get_index(index as usize).unwrap(); // Cannot fail
-                let cell = URect::from_corners(*cell_min, *cell_min + grid_size);
+                let cell = URect::from_corners(*cell_min, *cell_min + cell_size);
 
                 // Are we done?
                 if cell.contains(goal) {
@@ -90,7 +159,7 @@ impl<T: Copy + PartialEq, U: Unsigned + NumCast + Copy + Debug> PixelMap<T, U> {
 
                     // Map path points to cell centres
                     let mut path: Vec<UVec2> =
-                        path.iter().map(|min| *min + grid_half_size).collect();
+                        path.into_iter().map(|min| min + grid_half_size).collect();
 
                     // Replace first point (cell centre) with start
                     *path.get_mut(0).unwrap() = start;
@@ -99,7 +168,11 @@ impl<T: Copy + PartialEq, U: Unsigned + NumCast + Copy + Debug> PixelMap<T, U> {
                     let len = path.len();
                     *path.get_mut(len - 1).unwrap() = goal;
 
-                    return Some((path, cost, considered_nodes));
+                    return Some(PathfindAStarGridResult {
+                        path,
+                        cost,
+                        considered_cells,
+                    });
                 }
                 if cost > c {
                     continue;
@@ -113,7 +186,7 @@ impl<T: Copy + PartialEq, U: Unsigned + NumCast + Copy + Debug> PixelMap<T, U> {
             directions(last_successful_direction, direction_toggle)
                 .into_iter()
                 .for_each(|d| {
-                    considered_nodes += 1;
+                    considered_cells += 1;
 
                     let neighbor_cell = cell_neighbor(&cell, d);
                     if neighbor_cell.is_empty() {

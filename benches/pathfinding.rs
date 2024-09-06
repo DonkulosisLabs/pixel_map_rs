@@ -22,7 +22,7 @@ fn criterion_benchmark(c: &mut Criterion) {
 
     group.bench_function("pathfind_a_star_grid", |b| {
         b.iter(|| {
-            let (path, cost, considered) = pixel_map
+            let result = pixel_map
                 .pathfind_a_star_grid(
                     black_box(&pixel_map.region().as_urect()),
                     black_box(16),
@@ -33,9 +33,7 @@ fn criterion_benchmark(c: &mut Criterion) {
                 )
                 .unwrap();
 
-            black_box(path);
-            black_box(cost);
-            black_box(considered);
+            black_box(result);
         });
     });
 
