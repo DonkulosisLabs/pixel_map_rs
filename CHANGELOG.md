@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## v0.4.0
+
 * Add support for drawing rotated rectangles.
 * Add isocontour detection: `PixelMap::contour`. This method previously returned non-contiguous contouring line
   segments.
@@ -12,6 +14,7 @@
 * Add `PixelMap::non_uniform_quad_mesh` function.
 * Add a series of neighbour navigation functions surrounding: `PixelMap::visit_neighbor`.
 * Add A* grid pathfinding via `PixelMap::pathfind_a_star_grid`.
+* Fix `ILine::intersects_rect` to detect lines fully encompassed by a rectangle.
 
 ## v0.3.0
 
