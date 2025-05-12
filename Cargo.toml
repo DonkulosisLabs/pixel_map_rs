@@ -1,7 +1,7 @@
 [package]
 name = "pixel_map"
 description = "A map of pixels implemented by an MX quadtree."
-version = "0.3.0"
+version = "0.3.1"
 authors = ["Troy Kinsella"]
 homepage = "https://github.com/DonkulosisLabs/pixel_map_rs"
 repository = "https://github.com/DonkulosisLabs/pixel_map_rs"
@@ -12,17 +12,17 @@ keywords = ["pixel", "map", "image", "quadtree", "data-structure"]
 categories = ["data-structures", "multimedia::images"]
 
 [dependencies]
-bevy_math = "^0.15.0"
+bevy_math = "^0.16.0"
 fxhash = "^0.2.1"
-indexmap = "2.7.0"
+indexmap = "2.9.0"
 num-traits = "^0.2.19"
-serde = { version = "^1.0.215", features = ["derive"], optional = true, default-features = false }
+serde = { version = "^1.0.219", features = ["derive"], optional = true, default-features = false }
 
 [dev-dependencies]
 criterion = "^0.5.1"
 pprof = { version = "^0.13.0", features = ["criterion", "flamegraph"] }
 ron = "^0.8.1"
-image = "0.25.5"
+image = "0.25.6"
 
 [features]
 serialize = ["dep:serde", "bevy_math/serialize"]

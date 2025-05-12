@@ -212,10 +212,13 @@ impl ILine {
         seg1.relate(&seg2).unique_intersection()
     }
 
-    /// Determine if this line intersects the given rectangle.
+    /// Determine if this line intersects the edges of, or is contained within the given rectangle.
     #[inline]
     #[must_use]
     pub fn intersects_rect(&self, rect: &IRect) -> bool {
+        if rect.contains(self.start) || rect.contains(self.end) {
+            return true;
+        }
         for edge in irect_edges(rect) {
             if self.intersects_line(&edge).is_some() {
                 return true;
@@ -442,5 +445,64 @@ mod test {
         assert_eq!(line.diagonal_axis_alignment(), Some(Direction::NorthWest));
         let line = iline((10, 10), (0, 0));
         assert_eq!(line.diagonal_axis_alignment(), Some(Direction::SouthWest));
+    }
+
+    #[test]
+    fn test_intersects_rect() {
+        let rect = IRect::from_corners((0, 0).into(), (4, 4).into());
+
+        let intersecting_lines = vec![
+            iline((-1, 2), (2, 2)), // Crossing left edge
+            iline((3, 3), (3, 5)),  // Crossing top edge
+            iline((3, 3), (5, 3)),  // Crossing right edge
+            iline((2, 2), (2, -2)), // Crossing bottom edge
+            iline((-2, 2), (6, 2)), // Crossing two edges
+            //
+            iline((-1, 2), (0, 2)), // Touching left edge
+            iline((2, 5), (2, 4)),  // Touching top edge
+            iline((5, 1), (4, 1)),  // Touching right edge
+            iline((2, -1), (2, 0)), // Touching bottom edge
+            //
+            iline((-1, 5), (1, 3)),  // Crossing top-left vertex
+            iline((3, 3), (5, 5)),   // Crossing top-right vertex
+            iline((3, 1), (5, -1)),  // Crossing bottom-right vertex
+            iline((-1, -1), (1, 1)), // Crossing bottom-left vertex
+            //
+            iline((0, 4), (-1, 5)),  // Touching top-left vertex
+            iline((4, 4), (5, 5)),   // Touching top-right vertex
+            iline((-1, -1), (0, 0)), // Touching bottom-left vertex
+            iline((4, -1), (4, 0)),  // Touching bottom-right vertex
+            //
+            iline((0, 0), (0, 4)), // Along left edge
+            iline((0, 4), (4, 4)), // Along top edge
+            iline((0, 0), (4, 0)), // Along bottom edge
+            iline((4, 0), (4, 4)), // Along right edge
+            //
+            iline((1, 1), (3, 3)), // Contained
+            iline((3, 3), (1, 3)), // Contained
+        ];
+
+        for line in intersecting_lines {
+            assert!(
+                line.intersects_rect(&rect),
+                "expected intersection: {:?}",
+                line
+            );
+        }
+
+        let outlying_lines = vec![
+            iline((-2, 1), (-1, 3)),
+            iline((2, 5), (2, 6)),
+            iline((5, 1), (7, 1)),
+            iline((3, -1), (4, -2)),
+        ];
+
+        for line in outlying_lines {
+            assert!(
+                !line.intersects_rect(&rect),
+                "expected no intersection: {:?}",
+                line
+            );
+        }
     }
 }
