@@ -59,11 +59,11 @@ impl<T: Copy + PartialEq, U: Unsigned + NumCast + Copy + Debug> PixelMap<T, U> {
     ///   [euclidean_heuristic] is provided. But, a heuristic tuned specifically for your use case
     ///   can produce significant performance improvements.
     /// - `predicate`: A closure that takes a reference to a leaf node, and a reference to a
-    ///    rectangle as parameters. This rectangle represents the intersection of the node's
-    ///    region and the `bounds` parameter supplied to this method. It returns `true` if the
-    ///    node matches the predicate, or `false` otherwise. The `predicate` function is consulted
-    ///    for every node the composes a cell (with short-circuit), and cell is considered to be
-    ///    navigable only if all nodes produce a `true` result.
+    ///   rectangle as parameters. This rectangle represents the intersection of the node's
+    ///   region and the `bounds` parameter supplied to this method. It returns `true` if the
+    ///   node matches the predicate, or `false` otherwise. The `predicate` function is consulted
+    ///   for every node the composes a cell (with short-circuit), and cell is considered to be
+    ///   navigable only if all nodes produce a `true` result.
     ///
     /// # Returns
     ///

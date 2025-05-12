@@ -832,8 +832,8 @@ impl<T: Copy + PartialEq, U: Unsigned + NumCast + Copy + Debug> PixelMap<T, U> {
     ///
     /// - `rect`: The rectangle in which contained or overlapping nodes will be visited.
     /// - `predicate`: A closure that takes a reference to a leaf node,
-    ///    and a reference to the rectangle that is the effective intersection of the node's
-    ///    region and the `rect` parameter supplied to this method.
+    ///   and a reference to the rectangle that is the effective intersection of the node's
+    ///   region and the `rect` parameter supplied to this method.
     ///
     /// # Returns
     ///
