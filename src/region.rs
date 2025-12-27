@@ -181,7 +181,6 @@ impl<U: Unsigned + NumCast + Copy> Region<U> {
 #[allow(clippy::from_over_into)]
 impl<U: Unsigned + NumCast + Copy> Into<URect> for Region<U> {
     #[inline]
-    #[must_use]
     fn into(self) -> URect {
         URect::from_corners(self.point(), self.end_point())
     }
@@ -190,7 +189,6 @@ impl<U: Unsigned + NumCast + Copy> Into<URect> for Region<U> {
 #[allow(clippy::from_over_into)]
 impl<U: Unsigned + NumCast + Copy> Into<URect> for &Region<U> {
     #[inline]
-    #[must_use]
     fn into(self) -> URect {
         URect::from_corners(self.point(), self.end_point())
     }
@@ -199,7 +197,6 @@ impl<U: Unsigned + NumCast + Copy> Into<URect> for &Region<U> {
 #[allow(clippy::from_over_into)]
 impl<U: Unsigned + NumCast + Copy> Into<IRect> for Region<U> {
     #[inline]
-    #[must_use]
     fn into(self) -> IRect {
         IRect::from_corners(self.point().as_ivec2(), self.end_point().as_ivec2())
     }
@@ -208,7 +205,6 @@ impl<U: Unsigned + NumCast + Copy> Into<IRect> for Region<U> {
 #[allow(clippy::from_over_into)]
 impl<U: Unsigned + NumCast + Copy> Into<IRect> for &Region<U> {
     #[inline]
-    #[must_use]
     fn into(self) -> IRect {
         IRect::from_corners(self.point().as_ivec2(), self.end_point().as_ivec2())
     }
