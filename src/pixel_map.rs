@@ -50,7 +50,8 @@ impl<T: Copy + PartialEq, U: Unsigned + NumCast + Copy + Debug> PixelMap<T, U> {
     #[must_use]
     pub fn new(dimensions: &UVec2, value: T, pixel_size: u8) -> Self {
         assert!(
-            dimensions.x % pixel_size as u32 == 0 && dimensions.y % pixel_size as u32 == 0,
+            dimensions.x.is_multiple_of(pixel_size as u32)
+                && dimensions.y.is_multiple_of(pixel_size as u32),
             "dimensions must be a multiple of pixel_size on each axis"
         );
         assert!(
